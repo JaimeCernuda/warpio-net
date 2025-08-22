@@ -114,14 +114,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           </button>
         </form>
 
-        <div style={{ 
-          marginTop: '1rem', 
-          fontSize: '12px', 
-          color: '#666', 
-          textAlign: 'center' 
-        }}>
-          Default: warpio / warpio123
-        </div>
       </div>
     </div>
   )
