@@ -62,6 +62,6 @@ temp
 workspaces/
 data/
 
-# Package manager lock files (copied separately for caching)
-package-lock.json
+# Package manager lock files - keep for Docker caching
+# package-lock.json  # Needed for Docker build
 yarn.lock
