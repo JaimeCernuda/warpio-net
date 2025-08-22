@@ -8,10 +8,10 @@ services:
     container_name: warpio-net
     restart: unless-stopped
     ports:
-      - "3003:3003"
+      - "5015:5015"
     environment:
       - NODE_ENV=production
-      - PORT=3003
+      - PORT=5015
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - WARPIO_SESSION_SECRET=${WARPIO_SESSION_SECRET:-warpio-secret-change-me}
       - WARPIO_DATA_DIR=/app/data
@@ -23,7 +23,7 @@ services:
     networks:
       - warpio-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3003/api/auth/setup-status"]
+      test: ["CMD", "curl", "-f", "http://localhost:5015/api/auth/setup-status"]
       interval: 30s
       timeout: 10s
       retries: 3

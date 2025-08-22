@@ -53,7 +53,7 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    && git clone https://github.com/akougkas/warpio-cli.git /tmp/warpio-cli \
+    && git clone https://github.com/JaimeCernuda/warpio-cli.git /tmp/warpio-cli \
     && cd /tmp/warpio-cli \
     && npm ci \
     && npm run build \
@@ -95,15 +95,15 @@ RUN mkdir -p /app/data/.warpio/web-server \
 USER warpio
 
 # Expose port
-EXPOSE 3003
+EXPOSE 5015
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3003/api/auth/setup-status || exit 1
+    CMD curl -f http://localhost:5015/api/auth/setup-status || exit 1
 
 # Environment variables
 ENV NODE_ENV=production
-ENV PORT=3003
+ENV PORT=5015
 ENV WARPIO_DATA_DIR=/app/data
 
 # Start the application in development mode
