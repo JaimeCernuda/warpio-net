@@ -1,216 +1,178 @@
-# 🚀 Warpio CLI (Internal GRC Release)
+# Warpio Net - Web Interface for Warpio CLI
 
-**Note: This is an internal release for the Gnosis Research Center team. Do not distribute outside GRC.**
+A modern web-based interface for the Warpio CLI, providing terminal access and file management through a browser.
 
-[![npm version](https://badge.fury.io/js/%40warpio%2Fwarpio-cli.svg)](https://badge.fury.io/js/%40warpio%2Fwarpio-cli)
-[![Warpio CLI CI](https://github.com/akougkas/warpio-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/akougkas/warpio-cli/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+## Features
 
-![Warpio CLI Demo](./docs/assets/warpio-screenshot.png)
+- **Web Terminal**: Full terminal emulator running actual Warpio CLI
+- **File Management**: Browse, view, edit, and manage files through a web interface
+- **User Authentication**: Secure JWT-based login system
+- **Per-User Configuration**: Individual API keys and isolated workspaces
+- **Real-time Communication**: WebSocket-based terminal I/O
 
-Warpio CLI is an advanced AI-powered command-line interface designed specifically for scientific computing and research workflows. Built as an enhanced fork of [Google Gemini CLI](https://github.com/google-gemini/gemini-cli), Warpio integrates multi-agent personas, efficient context handover, and native support for scientific tools, making it an essential tool for researchers, data scientists, and HPC users.
+## Architecture
 
-As part of the [IOWarp ecosystem](https://grc.iit.edu/research/projects/iowarp), Warpio bridges AI with high-performance computing, enabling seamless collaboration between specialized AI experts for complex scientific tasks.
-
-## ✨ Key Features
-
-- **Multi-Agent Personas**: 5+ specialized AI experts for data handling, analysis, HPC, research, and workflows.
-- **Automatic IOWarp MCP Integration**: Zero-configuration access to scientific computing tools per persona.
-- **Context Handover**: Efficient multi-step workflows with 3-5x faster serialization using MessagePack.
-- **Scientific Tooling**: Built-in support for HDF5, NetCDF, SLURM, MPI, and more via MCP integration.
-- **Interactive & Non-Interactive Modes**: Flexible for quick queries or automated pipelines.
-- **Performance Optimized**: 60-80% smaller context files, ideal for large datasets.
-- **Extensible**: Easy integration with custom tools and personas.
-- **GRC-Specific**: Optimized for our HPC clusters, data pipelines, and research protocols.
-
-## 📦 Installation
-
-### Via npm (Recommended for Users)
-
-```bash
-npm install -g @warpio/warpio-cli
+```
+warpio-net/
+├── packages/
+│   ├── web-terminal/         # Express server + Socket.IO
+│   └── terminal-frontend/    # React frontend
+├── scripts/
+│   └── manage-users.cjs      # User management CLI
+└── DEPLOYMENT.md             # Deployment instructions
 ```
 
-### From Source (For Developers)
-
-```bash
-git clone https://github.com/akougkas/warpio-cli.git
-cd warpio-cli
-npm install
-npm run build
-npm link
-```
+## Quick Start
 
 ### Prerequisites
 
-- Node.js >= 20
-- [Gemini API Key](https://aistudio.google.com/app/apikey) (set as `GEMINI_API_KEY` env var)
-- For GRC HPC: Ensure access to shared modules (contact admin for setup)
+- Node.js 18+ 
+- Warpio CLI installed globally: `npm install -g warpio-cli`
+- Gemini API key from Google AI Studio
 
-## 🚀 Quick Start
-
-1. Set API key:
-
-   ```bash
-   export GEMINI_API_KEY="your-api-key"
-   ```
-
-2. Launch interactive session:
-
-   ```bash
-   warpio
-   ```
-
-3. Quick query:
-
-   ```bash
-   warpio -p "Generate a SLURM script for MPI job"
-   ```
-
-4. With persona (MCPs auto-configured):
-
-   ```bash
-   warpio --persona hpc-expert -p "Optimize this code for GPU"
-   ```
-
-5. List personas:
-   ```bash
-   warpio --list-personas
-   ```
-
-**New**: Each persona automatically gets its required IOWarp MCPs - no manual setup needed!  
-For GRC users: Use `--persona research-expert` for paper drafting with our template.
-
-## 📖 Usage
-
-### Interactive Mode
-
-Start a conversation:
+### Installation
 
 ```bash
-warpio
+git clone https://github.com/JaimeCernuda/warpio-net.git
+cd warpio-net
+npm run install-deps
+npm run build
 ```
 
-Use slash commands like `/mcp install hdf5` or natural language. For GRC: Prefix queries with "Using GRC cluster config:" for tailored responses.
-
-### Non-Interactive Mode
-
-For scripts or pipelines:
+### Start Server
 
 ```bash
-warpio -p "Process data.h5" --non-interactive
+cd packages/web-terminal
+GEMINI_API_KEY="your-api-key" PORT=3003 npm run dev
 ```
 
-Tip: Use with cron jobs for automated reports.
+Server runs at: **http://localhost:3003**
 
-### Personas
-
-Switch experts:
+### Create First User
 
 ```bash
-warpio --persona data-expert
+# Check setup status
+node scripts/manage-users.cjs status
+
+# Create admin user
+node scripts/manage-users.cjs setup admin yourpassword /home/admin your-api-key
 ```
 
-See [PERSONAS.md](./docs/PERSONAS.md) for details. GRC Tip: hpc-expert is optimized for our SLURM setup.
+## Usage
 
-### MCP Management
+1. Open browser to http://localhost:3003
+2. Login with your credentials
+3. Use the sidebar to switch between:
+   - **Terminal**: Full Warpio CLI access
+   - **Files**: Browse and edit files
 
-Install scientific tools:
+## User Management
+
+### Create Additional Users
 
 ```bash
-warpio mcp install slurm
+# Create new user (requires admin credentials)
+node scripts/manage-users.cjs create alice alice123 admin adminpass /home/alice alice-api-key
+
+# List all users
+node scripts/manage-users.cjs list admin adminpass
 ```
 
-List: `warpio mcp list`
+### API Endpoints
 
-GRC Tip: Install darshan-mcp for I/O profiling on our systems.
+- `POST /api/auth/setup` - Create first user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/users` - List users (admin only)
+- `POST /api/auth/users` - Create user (admin only)
+- `GET /api/files/*` - File operations
+- WebSocket on `/` - Terminal I/O
 
-### Context Handover
+## Security Features
 
-Chain tasks:
+- JWT authentication with 24-hour expiration
+- bcrypt password hashing
+- Path validation (users restricted to home directory)
+- CORS protection
+- Rate limiting
+- Session management
+
+## Configuration
+
+### Environment Variables
 
 ```bash
-warpio --persona data-expert --task "Extract data" --non-interactive --context-file ctx.msgpack
-warpio --persona analysis-expert --context-from ctx.msgpack -p "Analyze extracted data"
+# Required: API key for Warpio CLI
+export GEMINI_API_KEY="your-api-key"
+
+# Optional: Custom port (default: 3003)
+export PORT=3003
+
+# Optional: Session secret
+export WARPIO_SESSION_SECRET="your-session-secret"
 ```
 
-Useful for multi-step simulations in GRC projects.
+### Per-User Settings
 
-## 🧪 Examples
+Each user has:
+- **Username & Password**: Authentication credentials
+- **Home Directory**: Isolated file workspace
+- **API Key**: Personal Gemini quota (optional)
 
-### Data Analysis Workflow (GRC Style)
+## Production Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production setup instructions.
+
+## Development
+
+### Start Development Servers
 
 ```bash
-warpio --persona analysis-expert -p "Load CSV from shared storage, perform regression, plot results using plot-mcp"
+# Terminal server (backend)
+cd packages/web-terminal && npm run dev
+
+# Frontend (in another terminal)
+cd packages/terminal-frontend && npm run dev
 ```
 
-### HPC Job Submission
+### Build for Production
 
 ```bash
-warpio --persona hpc-expert -p "Create SLURM script with darshan-mcp profiling for our Theta cluster"
+npm run build
 ```
 
-More in [SCIENTIFIC_WORKFLOWS.md](./docs/SCIENTIFIC_WORKFLOWS.md).
+## Troubleshooting
 
-## 🛠️ Configuration
+### Common Issues
 
-- **API Key**: `GEMINI_API_KEY` env var
-- **Config File**: `~/.warpio/config.json` - Add GRC-specific paths here.
-- **Ignore Files**: `.warpioignore` - Exclude sensitive data.
-- **Project Notes**: `WARPIO.md` - Add project-specific instructions.
+- **Can't login**: Check user exists and credentials are correct
+- **Terminal not working**: Ensure Warpio CLI is installed globally
+- **File access denied**: Verify user has permissions for their home directory
 
-Run `warpio` for interactive setup. For GRC: See shared config template in team drive.
-
-Troubleshooting: If MCP fails, check `warpio mcp refresh`. Report issues in internal channel.
-
-## 🔧 For Developers
-
-### Building and Testing
+### Debug Commands
 
 ```bash
-npm run preflight  # Builds, tests, typechecks, lints
-npm test           # Run tests
+# Check setup status
+node scripts/manage-users.cjs status
+
+# Test user login
+node scripts/manage-users.cjs login username password
+
+# Check if port is in use
+lsof -i :3003
 ```
 
-### Git Workflow
+## License
 
-- **Branches**: main (stable), warpio/feature/\* (new features)
-- **Upstream Sync**: `git fetch upstream; git merge upstream/main`
-- **Commits**: Atomic, descriptive messages
+MIT License - see LICENSE file for details.
 
-### Architecture
+## Contributing
 
-- **Packages**: @warpio/warpio-cli (orchestration), @google/gemini-cli (UI), @google/gemini-cli-core (backend)
-- **Principles**: Immutable data, ES modules, functional patterns
-- **Personas**: Extend in src/personas/persona-manager.ts
-- **MCPs**: Catalog in ui/commands/mcpCommand.ts
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-See CLAUDE.md for full dev guide (internal only).
+## Related Projects
 
-## 🔧 Current Status (January 2025)
-
-- ✅ **Production Ready**: Clean, fast responses without debug clutter
-- ✅ **MCP Integration**: 8 stable MCP servers providing 70+ scientific computing tools
-- ✅ **All Personas Functional**: data-expert, analysis-expert, hpc-expert, research-expert, workflow-expert
-- ✅ **Battle Tested**: Automated testing framework validates core functionality
-- 🚧 **Provider Abstraction**: Planning complete for LM Studio/Ollama integration (see `/warpio-docs/ai-docs/plans/`)
-- 🚀 **Ready for Release**: Streamlined, production-ready scientific AI CLI
-
-## 👥 GRC Team
-
-- Report bugs in internal tracker
-- Share workflows in team meetings
-- Questions? Ping @akougkas
-
-## 🤝 Contributing
-
-Contributions welcome!
-
-- Check [CONTRIBUTING.md](CONTRIBUTING.md)
-- Focus on scientific/HPC features
-- Run `npm test` before PRs
-
-## 📜 License
-
-Apache 2.0 - see [LICENSE](LICENSE).  
-Forked from [Google Gemini CLI](https://github.com/google-gemini/gemini-cli) - thanks to the Gemini team!
+- [warpio-cli](https://github.com/JaimeCernuda/warpio-cli) - The core Warpio CLI tool
