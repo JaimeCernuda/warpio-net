@@ -1,0 +1,109 @@
+# Production Docker Compose with monitoring and security
+version: '3.8'
+
+services:
+  warpio-net:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: warpio-net
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - WARPIO_SESSION_SECRET=${WARPIO_SESSION_SECRET}
+    volumes:
+      - warpio_data:/app/data
+      - ${WARPIO_WORKSPACES_DIR:-./workspaces}:/workspaces
+    networks:
+      - warpio-internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/api/auth/setup-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:alpine
+    container_name: warpio-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - warpio-net
+    networks:
+      - warpio-internal
+      - warpio-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: Monitoring stack
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: warpio-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - warpio-internal
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: warpio-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - warpio-internal
+    profiles:
+      - monitoring
+
+volumes:
+  warpio_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  warpio-internal:
+    driver: bridge
+    internal: true
+  warpio-external:
+    driver: bridge

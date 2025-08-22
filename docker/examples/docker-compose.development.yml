@@ -1,0 +1,41 @@
+# Development Docker Compose with hot reloading
+version: '3.8'
+
+services:
+  warpio-net-dev:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: development
+    container_name: warpio-net-dev
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+      - "5173:5173"  # Vite dev server for frontend
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - WARPIO_SESSION_SECRET=dev-secret-not-for-production
+    volumes:
+      # Mount source code for hot reloading
+      - ../../packages:/app/packages
+      - ../../scripts:/app/scripts
+      - ../../package.json:/app/package.json
+      # Exclude node_modules to avoid conflicts
+      - /app/packages/web-terminal/node_modules
+      - /app/packages/terminal-frontend/node_modules
+      # Development data
+      - warpio_dev_data:/app/data
+      - ./dev-workspaces:/workspaces
+    networks:
+      - warpio-dev
+    command: ["npm", "run", "dev"]
+
+volumes:
+  warpio_dev_data:
+    driver: local
+
+networks:
+  warpio-dev:
+    driver: bridge

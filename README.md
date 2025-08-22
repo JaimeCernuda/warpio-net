@@ -120,7 +120,31 @@ Each user has:
 
 ## Production Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production setup instructions.
+### Docker (Recommended)
+
+```bash
+# Clone and setup
+git clone https://github.com/JaimeCernuda/warpio-net.git
+cd warpio-net
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your GEMINI_API_KEY
+
+# Start with Docker Compose
+docker-compose up -d
+
+# Create first user
+docker exec -it warpio-net node scripts/manage-users.cjs setup admin yourpassword
+```
+
+Access at: http://localhost:3003
+
+### Manual Installation
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed manual setup instructions.
+
+See [docker/DEPLOYMENT.md](docker/DEPLOYMENT.md) for comprehensive Docker deployment guide.
 
 ## Development
 
