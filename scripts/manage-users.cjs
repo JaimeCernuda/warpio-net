@@ -55,21 +55,58 @@ function makeRequest(method, path, data = null, token = null) {
   });
 }
 
-async function loginAsAdmin() {
+async function checkSetupStatus() {
   try {
-    const response = await makeRequest('POST', '/api/auth/login', {
-      username: 'warpio',
-      password: 'warpio123'
-    });
-    return response.token;
+    const response = await makeRequest('GET', '/api/auth/setup-status');
+    return response;
   } catch (error) {
-    console.error('Failed to login as admin:', error.message);
+    console.error('Failed to check setup status:', error.message);
     process.exit(1);
   }
 }
 
-async function createUser(username, password, homeDir, apiKey) {
-  const token = await loginAsAdmin();
+async function setupFirstUser(username, password, homeDir, apiKey) {
+  try {
+    const userData = {
+      username,
+      password,
+      workingDirectory: homeDir || `/home/${username}`,
+      ...(apiKey && { geminiApiKey: apiKey })
+    };
+    
+    const response = await makeRequest('POST', '/api/auth/setup', userData);
+    
+    console.log('✅ First user created successfully:');
+    console.log(`   Username: ${response.user.username}`);
+    console.log(`   Home Directory: ${response.user.workingDirectory}`);
+    console.log(`   API Key: ${response.user.geminiApiKey ? '***' + response.user.geminiApiKey.slice(-8) : 'Not set'}`);
+    console.log(`   Created: ${response.user.createdAt}`);
+    console.log('');
+    console.log('🎉 Setup complete! You can now login at http://localhost:3003');
+    
+    return response.user;
+  } catch (error) {
+    console.error('❌ Failed to setup first user:', error.message);
+    process.exit(1);
+  }
+}
+
+async function loginAsAdmin(username, password) {
+  try {
+    const response = await makeRequest('POST', '/api/auth/login', {
+      username: username || 'admin',
+      password: password || 'admin123'
+    });
+    return response.token;
+  } catch (error) {
+    console.error('Failed to login as admin:', error.message);
+    console.error('Hint: Use the username/password of an existing user with admin privileges');
+    process.exit(1);
+  }
+}
+
+async function createUser(username, password, homeDir, apiKey, adminUser, adminPass) {
+  const token = await loginAsAdmin(adminUser, adminPass);
   
   try {
     const userData = {
@@ -92,8 +129,8 @@ async function createUser(username, password, homeDir, apiKey) {
   }
 }
 
-async function listUsers() {
-  const token = await loginAsAdmin();
+async function listUsers(adminUser, adminPass) {
+  const token = await loginAsAdmin(adminUser, adminPass);
   
   try {
     const response = await makeRequest('GET', '/api/auth/users', null, token);
@@ -136,21 +173,45 @@ async function testLogin(username, password) {
 const [,, command, ...args] = process.argv;
 
 switch (command) {
-  case 'create':
+  case 'setup':
     if (args.length < 2) {
-      console.error('Usage: node manage-users.js create <username> <password> [homeDir] [apiKey]');
+      console.error('Usage: node manage-users.cjs setup <username> <password> [homeDir] [apiKey]');
       process.exit(1);
     }
-    createUser(args[0], args[1], args[2], args[3]);
+    setupFirstUser(args[0], args[1], args[2], args[3]);
+    break;
+
+  case 'status':
+    checkSetupStatus().then(status => {
+      console.log('🔍 Setup Status:');
+      console.log(`   Has Users: ${status.hasUsers}`);
+      console.log(`   Needs Setup: ${status.needsSetup}`);
+      if (status.needsSetup) {
+        console.log('');
+        console.log('💡 Run "node scripts/manage-users.cjs setup <username> <password>" to create the first user');
+      }
+    });
+    break;
+
+  case 'create':
+    if (args.length < 4) {
+      console.error('Usage: node manage-users.cjs create <username> <password> <adminUser> <adminPass> [homeDir] [apiKey]');
+      process.exit(1);
+    }
+    createUser(args[0], args[1], args[4], args[5], args[2], args[3]);
     break;
     
   case 'list':
-    listUsers();
+    if (args.length < 2) {
+      console.error('Usage: node manage-users.cjs list <adminUser> <adminPass>');
+      process.exit(1);
+    }
+    listUsers(args[0], args[1]);
     break;
     
   case 'login':
     if (args.length < 2) {
-      console.error('Usage: node manage-users.js login <username> <password>');
+      console.error('Usage: node manage-users.cjs login <username> <password>');
       process.exit(1);
     }
     testLogin(args[0], args[1]);
@@ -161,14 +222,21 @@ switch (command) {
     console.log('==========================');
     console.log('');
     console.log('Commands:');
-    console.log('  create <username> <password> [homeDir] [apiKey]  - Create new user');
-    console.log('  list                                              - List all users');
-    console.log('  login <username> <password>                      - Test user login');
+    console.log('  setup <username> <password> [homeDir] [apiKey]           - Setup first user (no auth required)');
+    console.log('  status                                                   - Check setup status');
+    console.log('  create <user> <pass> <adminUser> <adminPass> [dir] [key] - Create new user (requires admin)');
+    console.log('  list <adminUser> <adminPass>                            - List all users (requires admin)');
+    console.log('  login <username> <password>                             - Test user login');
+    console.log('');
+    console.log('Fresh Installation:');
+    console.log('  1. node scripts/manage-users.cjs status');
+    console.log('  2. node scripts/manage-users.cjs setup admin admin123 /home/admin AIzaSyC_YOUR_KEY');
+    console.log('  3. node scripts/manage-users.cjs create alice alice123 admin admin123');
     console.log('');
     console.log('Examples:');
-    console.log('  node scripts/manage-users.js create alice alice123');
-    console.log('  node scripts/manage-users.js create bob bob123 /home/bob AIzaSyC_YOUR_API_KEY');
-    console.log('  node scripts/manage-users.js list');
-    console.log('  node scripts/manage-users.js login alice alice123');
+    console.log('  node scripts/manage-users.cjs setup admin mypassword');
+    console.log('  node scripts/manage-users.cjs create alice alice123 admin mypassword /home/alice AIzaSyC_ALICE_KEY');
+    console.log('  node scripts/manage-users.cjs list admin mypassword');
+    console.log('  node scripts/manage-users.cjs login alice alice123');
     break;
 }

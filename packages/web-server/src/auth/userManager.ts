@@ -47,25 +47,14 @@ export class UserManager {
       try {
         await fs.access(this.usersFile);
       } catch {
-        await this.createDefaultUser();
+        await this.saveUsers([]);
+        console.log('Initialized empty users database');
       }
     } catch (error) {
       console.error('Failed to initialize users file:', error);
     }
   }
 
-  private async createDefaultUser() {
-    const defaultUser: User = {
-      id: 'default-user',
-      username: 'warpio',
-      passwordHash: await bcrypt.hash('warpio123', 10),
-      workingDirectory: process.cwd(),
-      createdAt: new Date().toISOString()
-    };
-
-    await this.saveUsers([defaultUser]);
-    console.log('Created default user: warpio / warpio123');
-  }
 
   private async loadUsers(): Promise<User[]> {
     try {
@@ -147,5 +136,20 @@ export class UserManager {
   async listUsers(): Promise<Omit<User, 'passwordHash'>[]> {
     const users = await this.loadUsers();
     return users.map(({ passwordHash, ...user }) => user);
+  }
+
+  async hasUsers(): Promise<boolean> {
+    const users = await this.loadUsers();
+    return users.length > 0;
+  }
+
+  async createFirstUser(username: string, password: string, workingDirectory?: string, geminiApiKey?: string): Promise<User> {
+    const users = await this.loadUsers();
+    
+    if (users.length > 0) {
+      throw new Error('Cannot create first user: users already exist');
+    }
+
+    return this.createUser(username, password, workingDirectory, geminiApiKey);
   }
 }

@@ -237,6 +237,43 @@ export class WarpioTerminalServer {
         res.status(500).json({ error: 'Internal server error' });
       }
     });
+
+    // Check if system has users (no auth required for setup)
+    this.app.get('/api/auth/setup-status', async (req: Request, res: Response) => {
+      try {
+        const hasUsers = await this.userManager.hasUsers();
+        res.json({ hasUsers, needsSetup: !hasUsers });
+      } catch (error) {
+        console.error('Setup status error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Create first user (no auth required, only works if no users exist)
+    this.app.post('/api/auth/setup', async (req: Request, res: Response) => {
+      try {
+        const { username, password, workingDirectory, geminiApiKey } = req.body;
+
+        if (!username || !password) {
+          return res.status(400).json({ error: 'Username and password required' });
+        }
+
+        const user = await this.userManager.createFirstUser(username, password, workingDirectory, geminiApiKey);
+        const { passwordHash, ...safeUser } = user;
+        
+        res.status(201).json({ 
+          success: true,
+          message: 'First user created successfully',
+          user: safeUser 
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('users already exist')) {
+          return res.status(409).json({ error: 'Setup already completed' });
+        }
+        console.error('Setup error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
   }
 
   private setupFileRoutes(upload: any) {
