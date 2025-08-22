@@ -80,7 +80,7 @@ COPY --from=frontend-builder /app/packages/terminal-frontend/dist ./packages/ter
 
 # Create stub for missing web-server package
 RUN mkdir -p packages/web-server/src/auth && \
-    echo 'export class UserManager { constructor() {} }' > packages/web-server/src/auth/userManager.js && \
+    echo 'export class UserManager { constructor() {} hasUsers() { return false; } async authenticateUser(username, password) { return null; } async createUser(userData) { return true; } }' > packages/web-server/src/auth/userManager.js && \
     echo 'export class AuthMiddleware { constructor(userManager) { this.userManager = userManager; } requireAuth = (req, res, next) => { req.user = { username: "admin", workingDirectory: "/app/data" }; next(); }; }' > packages/web-server/src/auth/middleware.js
 
 # Copy scripts and other required files
