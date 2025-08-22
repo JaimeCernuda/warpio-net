@@ -204,6 +204,39 @@ export class WarpioTerminalServer {
         }
       });
     });
+
+    // Create new user (admin only for now)
+    this.app.post('/api/auth/users', this.authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { username, password, workingDirectory, geminiApiKey } = req.body;
+
+        if (!username || !password) {
+          return res.status(400).json({ error: 'Username and password required' });
+        }
+
+        const user = await this.userManager.createUser(username, password, workingDirectory, geminiApiKey);
+        const { passwordHash, ...safeUser } = user;
+        
+        res.status(201).json({ user: safeUser });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Username already exists') {
+          return res.status(409).json({ error: error.message });
+        }
+        console.error('User creation error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // List users (admin only for now)
+    this.app.get('/api/auth/users', this.authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const users = await this.userManager.listUsers();
+        res.json({ users });
+      } catch (error) {
+        console.error('List users error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
   }
 
   private setupFileRoutes(upload: any) {
@@ -437,7 +470,7 @@ export class WarpioTerminalServer {
               ...process.env,
               TERM: 'xterm-256color',
               COLORTERM: 'truecolor',
-              GEMINI_API_KEY: process.env.GEMINI_API_KEY
+              GEMINI_API_KEY: user.geminiApiKey || process.env.GEMINI_API_KEY
             }
           });
 

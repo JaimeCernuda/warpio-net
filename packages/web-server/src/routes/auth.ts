@@ -73,13 +73,13 @@ export function createAuthRoutes(userManager: UserManager, authMiddleware: AuthM
   // Create new user (admin only for now)
   router.post('/users', authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { username, password, workingDirectory } = req.body;
+      const { username, password, workingDirectory, geminiApiKey } = req.body;
 
       if (!username || !password) {
         return res.status(400).json({ error: 'Username and password required' });
       }
 
-      const user = await userManager.createUser(username, password, workingDirectory);
+      const user = await userManager.createUser(username, password, workingDirectory, geminiApiKey);
       const { passwordHash, ...safeUser } = user;
       
       res.status(201).json({ user: safeUser });

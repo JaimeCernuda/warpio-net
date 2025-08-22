@@ -15,6 +15,7 @@ export interface User {
   username: string;
   passwordHash: string;
   workingDirectory: string;
+  geminiApiKey?: string;
   createdAt: string;
   lastLogin?: string;
 }
@@ -23,6 +24,7 @@ export interface UserSession {
   userId: string;
   username: string;
   workingDirectory: string;
+  geminiApiKey?: string;
 }
 
 export class UserManager {
@@ -78,7 +80,7 @@ export class UserManager {
     await fs.writeFile(this.usersFile, JSON.stringify(users, null, 2));
   }
 
-  async createUser(username: string, password: string, workingDirectory?: string): Promise<User> {
+  async createUser(username: string, password: string, workingDirectory?: string, geminiApiKey?: string): Promise<User> {
     const users = await this.loadUsers();
     
     if (users.find(u => u.username === username)) {
@@ -90,6 +92,7 @@ export class UserManager {
       username,
       passwordHash: await bcrypt.hash(password, 10),
       workingDirectory: workingDirectory || process.cwd(),
+      geminiApiKey,
       createdAt: new Date().toISOString()
     };
 
@@ -119,7 +122,8 @@ export class UserManager {
     return {
       userId: user.id,
       username: user.username,
-      workingDirectory: user.workingDirectory
+      workingDirectory: user.workingDirectory,
+      geminiApiKey: user.geminiApiKey
     };
   }
 
