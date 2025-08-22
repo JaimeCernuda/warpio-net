@@ -22,8 +22,8 @@ cd warpio-net
 Create `.env` file:
 
 ```bash
-# Required: Your Gemini API key
-GEMINI_API_KEY=AIzaSyC_YOUR_API_KEY_HERE
+# Required: Fallback Gemini API key (used when users don't have personal keys)
+GEMINI_API_KEY=AIzaSyC_YOUR_FALLBACK_API_KEY_HERE
 
 # Optional: Session secret (generate with openssl rand -hex 32)
 WARPIO_SESSION_SECRET=your-secure-session-secret
@@ -67,16 +67,25 @@ node scripts/manage-users.cjs setup admin yourpassword /workspaces/admin your-ap
 # Check setup status
 curl http://localhost:3003/api/auth/setup-status
 
-# Create admin user
+# Create admin user with personal API key
 curl -X POST http://localhost:3003/api/auth/setup \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
     "password": "yourpassword",
     "workingDirectory": "/workspaces/admin",
-    "geminiApiKey": "your-personal-api-key"
+    "geminiApiKey": "AIzaSyC_ADMIN_PERSONAL_API_KEY"
   }'
 ```
+
+### Important: API Key Configuration
+
+**The .env GEMINI_API_KEY is a fallback only** - each user should have their own personal API key for:
+- **Quota isolation**: Users don't affect each other's quotas
+- **Usage tracking**: Individual API usage monitoring  
+- **Security**: Personal API keys stay with users
+
+When creating users, always provide a personal `geminiApiKey`. The .env fallback is used only when a user doesn't have one set.
 
 ## Container Architecture
 

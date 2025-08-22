@@ -50,7 +50,13 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    && npm install -g warpio-cli \
+    && git clone https://github.com/JaimeCernuda/warpio-cli.git /tmp/warpio-cli \
+    && cd /tmp/warpio-cli \
+    && npm ci \
+    && npm run build \
+    && npm link \
+    && cd / \
+    && rm -rf /tmp/warpio-cli \
     && apk del make g++ python3
 
 # Create app user for security

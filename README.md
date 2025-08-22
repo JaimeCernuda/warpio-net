@@ -129,13 +129,13 @@ cd warpio-net
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your GEMINI_API_KEY
+# Edit .env with your FALLBACK GEMINI_API_KEY
 
 # Start with Docker Compose
 docker-compose up -d
 
-# Create first user
-docker exec -it warpio-net node scripts/manage-users.cjs setup admin yourpassword
+# Create first user with their personal API key
+docker exec -it warpio-net node scripts/manage-users.cjs setup admin yourpassword /workspaces/admin YOUR_PERSONAL_API_KEY
 ```
 
 Access at: http://localhost:3003
