@@ -78,10 +78,29 @@ COPY --from=backend-builder /app/packages/web-terminal/src ./packages/web-termin
 COPY --from=backend-builder /app/packages/web-terminal/node_modules ./packages/web-terminal/node_modules
 COPY --from=frontend-builder /app/packages/terminal-frontend/dist ./packages/terminal-frontend/dist
 
-# Create stub for missing web-server package
+# Create stub for missing web-server package and fix HTTPS headers
 RUN mkdir -p packages/web-server/src/auth && \
     echo 'export class UserManager { constructor() {} hasUsers() { return false; } async authenticateUser(username, password) { return null; } async createUser(userData) { return true; } }' > packages/web-server/src/auth/userManager.js && \
-    echo 'export class AuthMiddleware { constructor(userManager) { this.userManager = userManager; } requireAuth = (req, res, next) => { req.user = { username: "admin", workingDirectory: "/app/data" }; next(); }; }' > packages/web-server/src/auth/middleware.js
+    echo 'export class AuthMiddleware { constructor(userManager) { this.userManager = userManager; } requireAuth = (req, res, next) => { req.user = { username: "admin", workingDirectory: "/app/data" }; next(); }; }' > packages/web-server/src/auth/middleware.js && \
+    sed -i 's/scriptSrc: \["'\''self'\''", "'\''unsafe-eval'\''"]/scriptSrc: ["'\''self'\''", "'\''unsafe-eval'\''", "'\''unsafe-inline'\''"]/' packages/web-terminal/src/terminalServer.ts && \
+    sed -i '/helmet({/,/}));/c\
+    this.app.use(helmet({\
+      contentSecurityPolicy: {\
+        directives: {\
+          defaultSrc: ["'\''self'\''"],\
+          styleSrc: ["'\''self'\''", "'\''unsafe-inline'\''"],\
+          scriptSrc: ["'\''self'\''", "'\''unsafe-eval'\''", "'\''unsafe-inline'\''"],\
+          imgSrc: ["'\''self'\''", "data:", "blob:"],\
+          connectSrc: ["'\''self'\''", "ws:", "wss:"],\
+          fontSrc: ["'\''self'\''"],\
+          objectSrc: ["'\''none'\''"],\
+          mediaSrc: ["'\''self'\''"],\
+          frameSrc: ["'\''none'\''"]\
+        }\
+      },\
+      hsts: false,\
+      crossOriginOpenerPolicy: false\
+    }));' packages/web-terminal/src/terminalServer.ts
 
 # Copy scripts and other required files
 COPY scripts ./scripts
