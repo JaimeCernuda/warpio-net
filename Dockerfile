@@ -85,21 +85,11 @@ RUN mkdir -p packages/web-server/src/auth && \
     sed -i 's/scriptSrc: \["'\''self'\''", "'\''unsafe-eval'\''"]/scriptSrc: ["'\''self'\''", "'\''unsafe-eval'\''", "'\''unsafe-inline'\''"]/' packages/web-terminal/src/terminalServer.ts && \
     sed -i '/helmet({/,/}));/c\
     this.app.use(helmet({\
-      contentSecurityPolicy: {\
-        directives: {\
-          defaultSrc: ["'\''self'\''"],\
-          styleSrc: ["'\''self'\''", "'\''unsafe-inline'\''"],\
-          scriptSrc: ["'\''self'\''", "'\''unsafe-eval'\''", "'\''unsafe-inline'\''"],\
-          imgSrc: ["'\''self'\''", "data:", "blob:"],\
-          connectSrc: ["'\''self'\''", "ws:", "wss:"],\
-          fontSrc: ["'\''self'\''"],\
-          objectSrc: ["'\''none'\''"],\
-          mediaSrc: ["'\''self'\''"],\
-          frameSrc: ["'\''none'\''"]\
-        }\
-      },\
+      contentSecurityPolicy: false,\
       hsts: false,\
-      crossOriginOpenerPolicy: false\
+      crossOriginOpenerPolicy: false,\
+      crossOriginResourcePolicy: false,\
+      originAgentCluster: false\
     }));' packages/web-terminal/src/terminalServer.ts
 
 # Copy scripts and other required files
