@@ -101,13 +101,41 @@ echo "🚀 Warpio Net Bootstrap Setup"\n\
 echo "Creating first admin user..."\n\
 mkdir -p /app/data\n\
 echo "[{\"username\":\"admin\",\"password\":\"warpio123\",\"workingDirectory\":\"/app/data/admin\",\"geminiApiKey\":\"$GEMINI_API_KEY\",\"createdAt\":\"$(date -Iseconds)\"}]" > /app/data/users.json\n\
-echo "✅ First admin user created:"\n\
+echo ""\n\
+echo "✅ FIRST ADMIN USER CREATED SUCCESSFULLY!"\n\
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"\n\
+echo "🌐 ACCESS YOUR WARPIO TERMINAL:"\n\
+echo "   URL: http://localhost:5015"\n\
+echo ""\n\
+echo "🔑 LOGIN CREDENTIALS:"\n\
 echo "   Username: admin"\n\
 echo "   Password: warpio123"\n\
-echo "   🔒 IMPORTANT: Change this password after first login!"\n\
 echo ""\n\
-echo "Access your terminal at: http://localhost:5015"\n\
+echo "🔒 SECURITY - CHANGE PASSWORD IMMEDIATELY:"\n\
+echo "   1. Login with the credentials above"\n\
+echo "   2. Run this command in the container:"\n\
+echo "      docker exec -it warpio-net node /app/scripts/manage-users.cjs create newadmin YOUR_SECURE_PASSWORD /app/data/newadmin YOUR_API_KEY"\n\
+echo "   3. Then delete the temporary admin user:"\n\
+echo "      docker exec -it warpio-net bash -c \"jq '\''del(.[] | select(.username == \\\"admin\\\"))'\'' /app/data/users.json > /tmp/users.json && mv /tmp/users.json /app/data/users.json\""\n\
+echo ""\n\
+echo "⚠️  WARNING: The default password '\''warpio123'\'' is TEMPORARY and INSECURE!"\n\
+echo "   Change it immediately after first login."\n\
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"\n\
 ' > /app/bootstrap.sh && chmod +x /app/bootstrap.sh
+
+# Create password change helper script
+RUN echo '#!/bin/bash\n\
+if [ $# -ne 2 ]; then\n\
+  echo "Usage: /app/change-password.sh USERNAME NEW_PASSWORD"\n\
+  echo "Example: /app/change-password.sh admin mySecurePassword123"\n\
+  exit 1\n\
+fi\n\
+USERNAME=$1\n\
+NEW_PASSWORD=$2\n\
+echo "Changing password for user: $USERNAME"\n\
+jq --arg user "$USERNAME" --arg pass "$NEW_PASSWORD" '\''(.[] | select(.username == $user) | .password) = $pass'\'' /app/data/users.json > /tmp/users.json && mv /tmp/users.json /app/data/users.json\n\
+echo "✅ Password changed successfully for user: $USERNAME"\n\
+' > /app/change-password.sh && chmod +x /app/change-password.sh
 
 # Create data directory for user storage
 RUN mkdir -p /app/data/.warpio/web-server \
