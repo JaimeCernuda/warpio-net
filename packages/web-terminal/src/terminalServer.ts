@@ -504,6 +504,9 @@ export class WarpioTerminalServer {
             if command -v warpio >/dev/null 2>&1; then
               echo "Using warpio from PATH"
               warpio
+            elif [ -L /usr/local/bin/warpio ]; then
+              echo "Using symlinked warpio"
+              /usr/local/bin/warpio
             elif [ -f /usr/local/bin/warpio ]; then
               echo "Using /usr/local/bin/warpio"
               /usr/local/bin/warpio
@@ -511,10 +514,15 @@ export class WarpioTerminalServer {
               echo "Using node to run warpio directly"
               node /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js
             else
-              echo "❌ Warpio CLI not found. Available commands:"
-              ls -la /usr/local/bin/ | grep -i warpio || echo "No warpio in /usr/local/bin/"
-              ls -la /usr/local/lib/node_modules/ | grep -i warpio || echo "No warpio in node_modules"
-              find /usr/local -name "*warpio*" 2>/dev/null || echo "No warpio files found"
+              echo "❌ Warpio CLI not found. Debugging info:"
+              echo "PATH: $PATH"
+              echo "Checking /usr/local/bin/warpio:"
+              ls -la /usr/local/bin/warpio 2>/dev/null || echo "File not found"
+              if [ -L /usr/local/bin/warpio ]; then
+                echo "Warpio is a symlink, checking target:"
+                readlink -f /usr/local/bin/warpio
+                echo "Target exists:" && ls -la $(readlink -f /usr/local/bin/warpio) 2>/dev/null || echo "Target missing"
+              fi
               echo ""
               echo "Starting basic bash shell instead..."
               bash

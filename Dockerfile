@@ -55,14 +55,13 @@ RUN apk add --no-cache \
     g++ \
     && git clone https://github.com/JaimeCernuda/warpio-cli.git /tmp/warpio-cli \
     && cd /tmp/warpio-cli \
-    && npm ci \
+    && npm install \
     && npm run build \
-    && npm install -g . \
-    && echo "Checking warpio installation:" \
-    && ls -la /usr/local/lib/node_modules/ | grep warpio || echo "warpio not in node_modules" \
-    && find /usr/local -name "warpio*" -type f 2>/dev/null || echo "no warpio files found" \
-    && find /usr/local -name "gemini.js" -type f 2>/dev/null || echo "no gemini.js found" \
-    && npm list -g warpio || echo "warpio not in global packages" \
+    && npm link \
+    && echo "Checking warpio installation after npm link:" \
+    && which warpio || echo "warpio not in PATH" \
+    && ls -la /usr/local/bin/warpio 2>/dev/null || echo "warpio not in /usr/local/bin/" \
+    && command -v warpio >/dev/null 2>&1 && echo "✅ warpio command available" || echo "❌ warpio command not available" \
     && cd / \
     && rm -rf /tmp/warpio-cli
 
