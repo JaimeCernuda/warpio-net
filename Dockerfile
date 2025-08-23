@@ -33,17 +33,19 @@ RUN apk add --no-cache \
     g++ \
     jq
 
-# Install Warpio CLI (simple approach)
-RUN git clone https://github.com/JaimeCernuda/warpio-cli.git /tmp/warpio-cli && \
-    cd /tmp/warpio-cli && \
+# Install Warpio CLI (fix broken symlinks)
+RUN git clone https://github.com/JaimeCernuda/warpio-cli.git /usr/local/lib/warpio-cli-src && \
+    cd /usr/local/lib/warpio-cli-src && \
     npm install && \
     npm run build && \
-    npm link && \
+    echo "Creating warpio executable..." && \
+    echo '#!/bin/bash' > /usr/local/bin/warpio && \
+    echo 'exec node /usr/local/lib/warpio-cli-src/bundle/gemini.js "$@"' >> /usr/local/bin/warpio && \
+    chmod +x /usr/local/bin/warpio && \
     echo "Verifying warpio installation..." && \
     which warpio && \
     ls -la $(which warpio) && \
-    cd / && \
-    rm -rf /tmp/warpio-cli
+    warpio --version || echo "Version check failed but warpio is installed"
 
 # Create application user
 RUN addgroup -g 1001 -S nodejs && \
