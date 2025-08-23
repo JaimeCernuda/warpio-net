@@ -500,19 +500,19 @@ export class WarpioTerminalServer {
           // Start warpio terminal process
           // Find warpio installation and run it
           const warpioCommand = `
-            # Try to find and run warpio
-            if command -v warpio >/dev/null 2>&1; then
+            # Try to find and run warpio - prioritize working methods
+            if [ -f /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js ]; then
+              echo "Using node to run warpio directly"
+              node /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js
+            elif command -v warpio >/dev/null 2>&1; then
               echo "Using warpio from PATH"
               warpio
-            elif [ -L /usr/local/bin/warpio ]; then
-              echo "Using symlinked warpio"
+            elif [ -L /usr/local/bin/warpio ] && [ -f "$(readlink -f /usr/local/bin/warpio)" ]; then
+              echo "Using symlinked warpio (verified target exists)"
               /usr/local/bin/warpio
             elif [ -f /usr/local/bin/warpio ]; then
               echo "Using /usr/local/bin/warpio"
               /usr/local/bin/warpio
-            elif [ -f /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js ]; then
-              echo "Using node to run warpio directly"
-              node /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js
             else
               echo "❌ Warpio CLI not found. Debugging info:"
               echo "PATH: $PATH"
@@ -521,8 +521,10 @@ export class WarpioTerminalServer {
               if [ -L /usr/local/bin/warpio ]; then
                 echo "Warpio is a symlink, checking target:"
                 readlink -f /usr/local/bin/warpio
-                echo "Target exists:" && ls -la $(readlink -f /usr/local/bin/warpio) 2>/dev/null || echo "Target missing"
+                echo "Target exists:" && ls -la "$(readlink -f /usr/local/bin/warpio)" 2>/dev/null || echo "Target missing"
               fi
+              echo "Checking node_modules:"
+              ls -la /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js 2>/dev/null || echo "Direct path not found"
               echo ""
               echo "Starting basic bash shell instead..."
               bash

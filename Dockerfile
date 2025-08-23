@@ -103,60 +103,81 @@ RUN mkdir -p packages/web-server/src/auth && \
 # Copy scripts and other required files
 COPY scripts ./scripts
 
-# Fix the manage-users.cjs script to work with our file-based system
-RUN sed -i '/async function setupFirstUser/,/^}$/c\
-async function setupFirstUser(username, password, homeDir, apiKey) {\
-  try {\
-    const fs = require("fs");\
-    const path = require("path");\
-    const usersFile = "/app/data/users.json";\
-    \
-    // Ensure directory exists\
-    require("fs").mkdirSync(path.dirname(usersFile), { recursive: true });\
-    \
-    // Read existing users or create empty array\
-    let users = [];\
-    try {\
-      users = JSON.parse(fs.readFileSync(usersFile, "utf8"));\
-    } catch(e) {}\
-    \
-    // Check if user already exists\
-    if (users.find(u => u.username === username)) {\
-      console.log(`❌ User ${username} already exists`);\
-      return;\
-    }\
-    \
-    // Set up user directory\
-    const userWorkingDir = homeDir || `/app/data/${username}`;\
-    \
-    // Create user home directory\
-    console.log(`📁 Creating home directory: ${userWorkingDir}`);\
-    fs.mkdirSync(userWorkingDir, { recursive: true });\
-    \
-    // Add new user\
-    const userData = {\
-      username,\
-      password,\
-      workingDirectory: userWorkingDir,\
-      ...(apiKey && { geminiApiKey: apiKey }),\
-      createdAt: new Date().toISOString()\
-    };\
-    \
-    users.push(userData);\
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));\
-    \
-    console.log("✅ User created successfully:");\
-    console.log(`   Username: ${userData.username}`);\
-    console.log(`   Home Directory: ${userData.workingDirectory}`);\
-    console.log(`   API Key: ${userData.geminiApiKey ? "***" + userData.geminiApiKey.slice(-8) : "Not set"}`);\
-    console.log(`   Created: ${userData.createdAt}`);\
-    \
-    return userData;\
-  } catch (error) {\
-    console.error("❌ Failed to create user:", error.message);\
-    process.exit(1);\
-  }\
-}' /app/scripts/manage-users.cjs
+# Create a working user management script
+RUN cat > /app/scripts/simple-user-manager.cjs << 'EOF'
+const fs = require('fs');
+const path = require('path');
+
+const USERS_FILE = '/app/data/users.json';
+
+function ensureUsersFile() {
+  try {
+    fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true });
+    if (!fs.existsSync(USERS_FILE)) {
+      fs.writeFileSync(USERS_FILE, '[]');
+    }
+  } catch(e) {}
+}
+
+function getUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  } catch(e) {}
+}
+
+function createUser(username, password, homeDir, apiKey) {
+  ensureUsersFile();
+  
+  const users = getUsers();
+  
+  if (users.find(u => u.username === username)) {
+    console.log(`❌ User ${username} already exists`);
+    return;
+  }
+  
+  const userWorkingDir = homeDir || `/app/data/${username}`;
+  
+  console.log(`📁 Creating home directory: ${userWorkingDir}`);
+  fs.mkdirSync(userWorkingDir, { recursive: true });
+  
+  const userData = {
+    username,
+    password,
+    workingDirectory: userWorkingDir,
+    ...(apiKey && { geminiApiKey: apiKey }),
+    createdAt: new Date().toISOString()
+  };
+  
+  users.push(userData);
+  saveUsers(users);
+  
+  console.log("✅ User created successfully:");
+  console.log(`   Username: ${userData.username}`);
+  console.log(`   Home Directory: ${userData.workingDirectory}`);
+  console.log(`   API Key: ${userData.geminiApiKey ? "***" + userData.geminiApiKey.slice(-8) : "Not set"}`);
+  console.log(`   Created: ${userData.createdAt}`);
+  
+  return userData;
+}
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+if (args[0] === 'create' && args.length === 5) {
+  const [, username, password, homeDir, apiKey] = args;
+  createUser(username, password, homeDir, apiKey);
+} else {
+  console.log('Usage: node simple-user-manager.cjs create USERNAME PASSWORD HOMEDIR APIKEY');
+  process.exit(1);
+}
+EOF
 
 # Create bootstrap script for first user setup
 RUN echo '#!/bin/bash\n\
