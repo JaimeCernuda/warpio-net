@@ -53,21 +53,12 @@ export class WarpioTerminalServer {
   }
 
   private setupMiddleware() {
-    // Security middleware
+    // Security middleware - disabled problematic headers for HTTP/IP access
     this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-eval'"], // xterm.js needs unsafe-eval
-          imgSrc: ["'self'", "data:", "blob:"],
-          connectSrc: ["'self'", "ws:", "wss:"],
-          fontSrc: ["'self'"],
-          objectSrc: ["'none'"],
-          mediaSrc: ["'self'"],
-          frameSrc: ["'none'"],
-        },
-      },
+      contentSecurityPolicy: false,
+      hsts: false,
+      crossOriginOpenerPolicy: false,
+      originAgentCluster: false
     }));
 
     // CORS
