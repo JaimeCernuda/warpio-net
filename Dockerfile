@@ -23,15 +23,23 @@ COPY packages/web-terminal ./packages/web-terminal
 # Stage 3: Production Image
 FROM node:20-alpine AS production
 
-# Install system dependencies
+# Install system dependencies including uv for Python package management
 RUN apk add --no-cache \
     bash \
     curl \
     git \
     python3 \
+    python3-dev \
+    py3-pip \
     make \
     g++ \
-    jq
+    jq \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && ln -sf /root/.cargo/bin/uv /usr/local/bin/uv \
+    && ln -sf /root/.cargo/bin/uvx /usr/local/bin/uvx \
+    && echo "Verifying uv installation..." \
+    && uv --version \
+    && uvx --version
 
 # Install Warpio CLI and prepare .gemini config files
 RUN git clone https://github.com/JaimeCernuda/warpio-cli.git /usr/local/lib/warpio-cli-src && \
@@ -80,9 +88,10 @@ RUN mkdir -p packages/web-server/src/auth && \
 RUN echo '[{"username":"admin","password":"warpio123","workingDirectory":"/app/data/admin","createdAt":"2024-01-01T00:00:00.000Z"}]' > /app/data/users.json && \
     cp -r /usr/local/lib/warpio-cli-src/.gemini /app/data/admin/.gemini
 
-# Fix permissions
+# Fix permissions and ensure warpio user can access uv tools
 RUN chown -R warpio:nodejs /app && \
-    chmod -R 755 /app
+    chmod -R 755 /app && \
+    chmod 755 /usr/local/bin/uv /usr/local/bin/uvx
 
 # Switch to application user
 USER warpio
@@ -91,6 +100,7 @@ USER warpio
 ENV NODE_ENV=production
 ENV PORT=5015
 ENV WARPIO_DATA_DIR=/app/data
+ENV PATH="/usr/local/bin:${PATH}"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
