@@ -58,10 +58,11 @@ RUN apk add --no-cache \
     && npm ci \
     && npm run build \
     && npm install -g . \
-    && ln -sf /usr/local/lib/node_modules/warpio/bundle/gemini.js /usr/local/bin/warpio \
-    && chmod +x /usr/local/bin/warpio \
-    && which warpio || echo "warpio not in PATH" \
-    && ls -la /usr/local/bin/warpio || echo "warpio binary not found" \
+    && echo "Checking warpio installation:" \
+    && ls -la /usr/local/lib/node_modules/ | grep warpio || echo "warpio not in node_modules" \
+    && find /usr/local -name "warpio*" -type f 2>/dev/null || echo "no warpio files found" \
+    && find /usr/local -name "gemini.js" -type f 2>/dev/null || echo "no gemini.js found" \
+    && npm list -g warpio || echo "warpio not in global packages" \
     && cd / \
     && rm -rf /tmp/warpio-cli
 

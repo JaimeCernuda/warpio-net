@@ -498,8 +498,28 @@ export class WarpioTerminalServer {
           socket.emit('auth-success', { user });
           
           // Start warpio terminal process
-          // Use bash to run warpio with full PATH and fallback to direct path
-          const warpioCommand = 'which warpio >/dev/null 2>&1 && warpio || /usr/local/bin/warpio || /usr/local/lib/node_modules/warpio/bundle/gemini.js';
+          // Find warpio installation and run it
+          const warpioCommand = `
+            # Try to find and run warpio
+            if command -v warpio >/dev/null 2>&1; then
+              echo "Using warpio from PATH"
+              warpio
+            elif [ -f /usr/local/bin/warpio ]; then
+              echo "Using /usr/local/bin/warpio"
+              /usr/local/bin/warpio
+            elif [ -f /usr/local/lib/node_modules/warpio/bundle/gemini.js ]; then
+              echo "Using node to run warpio directly"
+              node /usr/local/lib/node_modules/warpio/bundle/gemini.js
+            else
+              echo "❌ Warpio CLI not found. Available commands:"
+              ls -la /usr/local/bin/ | grep -i warpio || echo "No warpio in /usr/local/bin/"
+              ls -la /usr/local/lib/node_modules/ | grep -i warpio || echo "No warpio in node_modules"
+              find /usr/local -name "*warpio*" 2>/dev/null || echo "No warpio files found"
+              echo ""
+              echo "Starting basic bash shell instead..."
+              bash
+            fi
+          `;
           
           ptyProcess = spawn('bash', ['-c', warpioCommand], {
             name: 'xterm-color',
