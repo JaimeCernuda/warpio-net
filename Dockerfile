@@ -104,7 +104,7 @@ RUN mkdir -p packages/web-server/src/auth && \
 COPY scripts ./scripts
 
 # Create a working user management script
-RUN cat > /app/scripts/simple-user-manager.cjs << 'EOF'
+RUN cat > /app/scripts/simple-user-manager.cjs << 'SCRIPT_EOF'
 const fs = require('fs');
 const path = require('path');
 
@@ -177,7 +177,7 @@ if (args[0] === 'create' && args.length === 5) {
   console.log('Usage: node simple-user-manager.cjs create USERNAME PASSWORD HOMEDIR APIKEY');
   process.exit(1);
 }
-EOF
+SCRIPT_EOF
 
 # Create bootstrap script for first user setup
 RUN echo '#!/bin/bash\n\
