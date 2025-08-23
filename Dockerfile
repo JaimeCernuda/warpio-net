@@ -80,7 +80,7 @@ COPY --from=frontend-builder /app/packages/terminal-frontend/dist ./packages/ter
 
 # Create stub for missing web-server package and fix HTTPS headers
 RUN mkdir -p packages/web-server/src/auth && \
-    echo 'import fs from "fs"; import path from "path"; const USERS_FILE = "/app/data/users.json"; export class UserManager { constructor() { this.ensureUsersFile(); } ensureUsersFile() { try { if (!fs.existsSync(USERS_FILE)) { fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true }); fs.writeFileSync(USERS_FILE, "[]"); } } catch(e) {} } getUsers() { try { return JSON.parse(fs.readFileSync(USERS_FILE, "utf8")); } catch(e) { return []; } } saveUsers(users) { try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); } catch(e) {} } hasUsers() { return this.getUsers().length > 0; } async authenticateUser(username, password) { const users = this.getUsers(); return users.find(u => u.username === username && u.password === password) || null; } async createUser(userData) { const users = this.getUsers(); if (users.find(u => u.username === userData.username)) return false; users.push({ ...userData, createdAt: new Date().toISOString() }); this.saveUsers(users); return true; } }' > packages/web-server/src/auth/userManager.js && \
+    echo 'import fs from "fs"; import path from "path"; import crypto from "crypto"; const USERS_FILE = "/app/data/users.json"; export class UserManager { constructor() { this.ensureUsersFile(); } ensureUsersFile() { try { if (!fs.existsSync(USERS_FILE)) { fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true }); fs.writeFileSync(USERS_FILE, "[]"); } } catch(e) {} } getUsers() { try { return JSON.parse(fs.readFileSync(USERS_FILE, "utf8")); } catch(e) { return []; } } saveUsers(users) { try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); } catch(e) {} } hasUsers() { return this.getUsers().length > 0; } async authenticateUser(username, password) { const users = this.getUsers(); return users.find(u => u.username === username && u.password === password) || null; } async createUser(userData) { const users = this.getUsers(); if (users.find(u => u.username === userData.username)) return false; users.push({ ...userData, createdAt: new Date().toISOString() }); this.saveUsers(users); return true; } generateToken(user) { return crypto.randomBytes(32).toString("hex"); } }' > packages/web-server/src/auth/userManager.js && \
     echo 'export class AuthMiddleware { constructor(userManager) { this.userManager = userManager; } requireAuth = (req, res, next) => { const token = req.headers.authorization?.replace("Bearer ", "") || req.session?.token; if (token === "admin-setup-token" || req.session?.user) { req.user = req.session?.user || { username: "admin", workingDirectory: "/app/data" }; next(); } else { res.status(401).json({ error: "Unauthorized" }); } }; }' > packages/web-server/src/auth/middleware.js && \
     sed -i 's/scriptSrc: \["'\''self'\''", "'\''unsafe-eval'\''"]/scriptSrc: ["'\''self'\''", "'\''unsafe-eval'\''", "'\''unsafe-inline'\''"]/' packages/web-terminal/src/terminalServer.ts && \
     sed -i '/helmet({/,/}));/c\
@@ -123,7 +123,25 @@ echo "   Change it immediately after first login."\n\
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"\n\
 ' > /app/bootstrap.sh && chmod +x /app/bootstrap.sh
 
-# Create password change helper script
+# Create simple user management scripts that actually work
+RUN echo '#!/bin/bash\n\
+if [ $# -ne 4 ]; then\n\
+  echo "Usage: /app/add-user.sh USERNAME PASSWORD HOMEDIR APIKEY"\n\
+  echo "Example: /app/add-user.sh newadmin securepass123 /app/data/newadmin AIzaSyC_..."\n\
+  exit 1\n\
+fi\n\
+USERNAME=$1\n\
+PASSWORD=$2\n\
+HOMEDIR=$3\n\
+APIKEY=$4\n\
+echo "Adding user: $USERNAME"\n\
+if [ ! -f /app/data/users.json ]; then\n\
+  echo "[]" > /app/data/users.json\n\
+fi\n\
+jq --arg user "$USERNAME" --arg pass "$PASSWORD" --arg home "$HOMEDIR" --arg api "$APIKEY" --arg date "$(date -Iseconds)" '\''.\'' + [{username: $user, password: $pass, workingDirectory: $home, geminiApiKey: $api, createdAt: $date}]'\'' /app/data/users.json > /tmp/users.json && mv /tmp/users.json /app/data/users.json\n\
+echo "✅ User $USERNAME added successfully!"\n\
+' > /app/add-user.sh && chmod +x /app/add-user.sh
+
 RUN echo '#!/bin/bash\n\
 if [ $# -ne 2 ]; then\n\
   echo "Usage: /app/change-password.sh USERNAME NEW_PASSWORD"\n\
@@ -136,6 +154,18 @@ echo "Changing password for user: $USERNAME"\n\
 jq --arg user "$USERNAME" --arg pass "$NEW_PASSWORD" '\''(.[] | select(.username == $user) | .password) = $pass'\'' /app/data/users.json > /tmp/users.json && mv /tmp/users.json /app/data/users.json\n\
 echo "✅ Password changed successfully for user: $USERNAME"\n\
 ' > /app/change-password.sh && chmod +x /app/change-password.sh
+
+RUN echo '#!/bin/bash\n\
+if [ $# -ne 1 ]; then\n\
+  echo "Usage: /app/remove-user.sh USERNAME"\n\
+  echo "Example: /app/remove-user.sh admin"\n\
+  exit 1\n\
+fi\n\
+USERNAME=$1\n\
+echo "Removing user: $USERNAME"\n\
+jq --arg user "$USERNAME" '\''del(.[] | select(.username == $user))'\'' /app/data/users.json > /tmp/users.json && mv /tmp/users.json /app/data/users.json\n\
+echo "✅ User $USERNAME removed successfully!"\n\
+' > /app/remove-user.sh && chmod +x /app/remove-user.sh
 
 # Create data directory for user storage
 RUN mkdir -p /app/data/.warpio/web-server \
