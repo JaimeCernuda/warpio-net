@@ -292,8 +292,11 @@ export class WarpioTerminalServer {
         }
 
         const entries = await fs.readdir(fullPath, { withFileTypes: true });
+        // Filter out dotfiles (files/folders starting with .)
+        const visibleEntries = entries.filter(entry => !entry.name.startsWith('.'));
+        
         const items = await Promise.all(
-          entries.map(async (entry) => {
+          visibleEntries.map(async (entry) => {
             const itemPath = path.join(fullPath, entry.name);
             const itemStats = await fs.stat(itemPath);
             return {

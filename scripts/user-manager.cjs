@@ -63,6 +63,17 @@ class UserManager {
     try {
       console.log(`📁 Creating home directory: ${userWorkingDir}`);
       fs.mkdirSync(userWorkingDir, { recursive: true });
+      
+      // Copy .gemini config files to user directory
+      const geminiTemplatePath = '/usr/local/lib/warpio-cli-src/.gemini';
+      const userGeminiPath = path.join(userWorkingDir, '.gemini');
+      
+      if (fs.existsSync(geminiTemplatePath)) {
+        console.log(`📋 Copying .gemini config files to user directory`);
+        this.copyDirectory(geminiTemplatePath, userGeminiPath);
+      } else {
+        console.log(`⚠️  Warning: .gemini template not found at ${geminiTemplatePath}`);
+      }
     } catch (error) {
       console.error(`❌ Failed to create directory ${userWorkingDir}:`, error.message);
       return false;
@@ -106,6 +117,29 @@ class UserManager {
       console.log(`   - ${user.username} (${user.workingDirectory})`);
     });
     return users;
+  }
+
+  copyDirectory(src, dest) {
+    try {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+      
+      const items = fs.readdirSync(src);
+      for (const item of items) {
+        const srcPath = path.join(src, item);
+        const destPath = path.join(dest, item);
+        
+        const stat = fs.statSync(srcPath);
+        if (stat.isDirectory()) {
+          this.copyDirectory(srcPath, destPath);
+        } else {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to copy directory from ${src} to ${dest}:`, error.message);
+    }
   }
 }
 

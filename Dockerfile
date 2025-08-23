@@ -33,7 +33,7 @@ RUN apk add --no-cache \
     g++ \
     jq
 
-# Install Warpio CLI (fix broken symlinks)
+# Install Warpio CLI and prepare .gemini config files
 RUN git clone https://github.com/JaimeCernuda/warpio-cli.git /usr/local/lib/warpio-cli-src && \
     cd /usr/local/lib/warpio-cli-src && \
     npm install && \
@@ -42,6 +42,8 @@ RUN git clone https://github.com/JaimeCernuda/warpio-cli.git /usr/local/lib/warp
     echo '#!/bin/bash' > /usr/local/bin/warpio && \
     echo 'exec node /usr/local/lib/warpio-cli-src/bundle/gemini.js "$@"' >> /usr/local/bin/warpio && \
     chmod +x /usr/local/bin/warpio && \
+    echo "Preparing .gemini config files..." && \
+    cp -r /usr/local/lib/warpio-cli-src/.gemini /usr/local/share/warpio-gemini-template && \
     echo "Verifying warpio installation..." && \
     which warpio && \
     ls -la $(which warpio) && \
@@ -74,8 +76,9 @@ RUN mkdir -p packages/web-server/src/auth && \
 
 # Security headers already fixed in source code
 
-# Create initial admin user  
-RUN echo '[{"username":"admin","password":"warpio123","workingDirectory":"/app/data/admin","createdAt":"2024-01-01T00:00:00.000Z"}]' > /app/data/users.json
+# Create initial admin user and copy .gemini config
+RUN echo '[{"username":"admin","password":"warpio123","workingDirectory":"/app/data/admin","createdAt":"2024-01-01T00:00:00.000Z"}]' > /app/data/users.json && \
+    cp -r /usr/local/lib/warpio-cli-src/.gemini /app/data/admin/.gemini
 
 # Fix permissions
 RUN chown -R warpio:nodejs /app && \
