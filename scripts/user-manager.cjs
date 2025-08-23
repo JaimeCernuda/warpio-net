@@ -119,6 +119,31 @@ class UserManager {
     return users;
   }
 
+  removeUser(username) {
+    console.log(`Removing user: ${username}`);
+    
+    const users = this.getUsers();
+    const userIndex = users.findIndex(u => u.username === username);
+    
+    if (userIndex === -1) {
+      console.log(`❌ User ${username} not found`);
+      return false;
+    }
+    
+    const user = users[userIndex];
+    users.splice(userIndex, 1);
+    
+    try {
+      this.saveUsers(users);
+      console.log(`✅ User ${username} removed from database`);
+      console.log(`⚠️  Note: Home directory ${user.workingDirectory} not deleted (manual cleanup needed)`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to remove user:`, error.message);
+      return false;
+    }
+  }
+
   copyDirectory(src, dest) {
     try {
       if (!fs.existsSync(dest)) {
@@ -160,6 +185,15 @@ function main() {
       const success = manager.createUser(username, password, homeDir, apiKey);
       process.exit(success ? 0 : 1);
       
+    case 'remove':
+      if (args.length !== 2) {
+        console.log('Usage: node user-manager.cjs remove <username>');
+        process.exit(1);
+      }
+      const [, usernameToRemove] = args;
+      const removed = manager.removeUser(usernameToRemove);
+      process.exit(removed ? 0 : 1);
+      
     case 'list':
       manager.listUsers();
       break;
@@ -167,6 +201,7 @@ function main() {
     default:
       console.log('Available commands:');
       console.log('  create <username> <password> <homedir> <apikey> - Create a new user');
+      console.log('  remove <username> - Remove a user');
       console.log('  list - List all users');
       process.exit(1);
   }
