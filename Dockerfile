@@ -57,7 +57,11 @@ RUN apk add --no-cache \
     && cd /tmp/warpio-cli \
     && npm ci \
     && npm run build \
-    && npm link \
+    && npm install -g . \
+    && ln -sf /usr/local/lib/node_modules/warpio/bundle/gemini.js /usr/local/bin/warpio \
+    && chmod +x /usr/local/bin/warpio \
+    && which warpio || echo "warpio not in PATH" \
+    && ls -la /usr/local/bin/warpio || echo "warpio binary not found" \
     && cd / \
     && rm -rf /tmp/warpio-cli
 
@@ -122,11 +126,18 @@ async function setupFirstUser(username, password, homeDir, apiKey) {\
       return;\
     }\
     \
+    // Set up user directory\
+    const userWorkingDir = homeDir || `/app/data/${username}`;\
+    \
+    // Create user home directory\
+    console.log(`📁 Creating home directory: ${userWorkingDir}`);\
+    fs.mkdirSync(userWorkingDir, { recursive: true });\
+    \
     // Add new user\
     const userData = {\
       username,\
       password,\
-      workingDirectory: homeDir || `/home/${username}`,\
+      workingDirectory: userWorkingDir,\
       ...(apiKey && { geminiApiKey: apiKey }),\
       createdAt: new Date().toISOString()\
     };\
@@ -151,7 +162,7 @@ async function setupFirstUser(username, password, homeDir, apiKey) {\
 RUN echo '#!/bin/bash\n\
 echo "🚀 Warpio Net Bootstrap Setup"\n\
 echo "Creating first admin user..."\n\
-mkdir -p /app/data\n\
+mkdir -p /app/data/admin\n\
 echo "[{\"username\":\"admin\",\"password\":\"warpio123\",\"workingDirectory\":\"/app/data/admin\",\"geminiApiKey\":\"$GEMINI_API_KEY\",\"createdAt\":\"$(date -Iseconds)\"}]" > /app/data/users.json\n\
 echo ""\n\
 echo "✅ FIRST ADMIN USER CREATED SUCCESSFULLY!"\n\
@@ -190,8 +201,13 @@ echo "Adding user: $USERNAME"\n\
 if [ ! -f /app/data/users.json ]; then\n\
   echo "[]" > /app/data/users.json\n\
 fi\n\
+echo "Creating user home directory: $HOMEDIR"\n\
+mkdir -p "$HOMEDIR"\n\
+chown warpio:nodejs "$HOMEDIR"\n\
+chmod 755 "$HOMEDIR"\n\
 jq --arg user "$USERNAME" --arg pass "$PASSWORD" --arg home "$HOMEDIR" --arg api "$APIKEY" --arg date "$(date -Iseconds)" '\''.\'' + [{username: $user, password: $pass, workingDirectory: $home, geminiApiKey: $api, createdAt: $date}]'\'' /app/data/users.json > /tmp/users.json && mv /tmp/users.json /app/data/users.json\n\
 echo "✅ User $USERNAME added successfully!"\n\
+echo "✅ Home directory $HOMEDIR created!"\n\
 ' > /app/add-user.sh && chmod +x /app/add-user.sh
 
 RUN echo '#!/bin/bash\n\
@@ -220,7 +236,7 @@ echo "✅ User $USERNAME removed successfully!"\n\
 ' > /app/remove-user.sh && chmod +x /app/remove-user.sh
 
 # Create data directory for user storage
-RUN mkdir -p /app/data/.warpio/web-server \
+RUN mkdir -p /app/data/.warpio/web-server /app/data/admin \
     && chown -R warpio:nodejs /app \
     && chmod -R 755 /app
 
@@ -241,4 +257,4 @@ ENV WARPIO_DATA_DIR=/app/data
 
 # Start the application in development mode
 WORKDIR /app/packages/web-terminal
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "mkdir -p /app/data/admin && npm run dev"]

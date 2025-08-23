@@ -498,7 +498,10 @@ export class WarpioTerminalServer {
           socket.emit('auth-success', { user });
           
           // Start warpio terminal process
-          ptyProcess = spawn('warpio', [], {
+          // Use bash to run warpio with full PATH and fallback to direct path
+          const warpioCommand = 'which warpio >/dev/null 2>&1 && warpio || /usr/local/bin/warpio || /usr/local/lib/node_modules/warpio/bundle/gemini.js';
+          
+          ptyProcess = spawn('bash', ['-c', warpioCommand], {
             name: 'xterm-color',
             cols: 80,
             rows: 24,
@@ -507,6 +510,8 @@ export class WarpioTerminalServer {
               ...process.env,
               TERM: 'xterm-256color',
               COLORTERM: 'truecolor',
+              PATH: '/usr/local/bin:/usr/bin:/bin:' + (process.env.PATH || ''),
+              NODE_PATH: '/usr/local/lib/node_modules',
               GEMINI_API_KEY: user.geminiApiKey || process.env.GEMINI_API_KEY
             }
           });
