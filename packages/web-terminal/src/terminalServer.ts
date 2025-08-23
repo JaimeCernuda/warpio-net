@@ -507,9 +507,9 @@ export class WarpioTerminalServer {
             elif [ -f /usr/local/bin/warpio ]; then
               echo "Using /usr/local/bin/warpio"
               /usr/local/bin/warpio
-            elif [ -f /usr/local/lib/node_modules/warpio/bundle/gemini.js ]; then
+            elif [ -f /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js ]; then
               echo "Using node to run warpio directly"
-              node /usr/local/lib/node_modules/warpio/bundle/gemini.js
+              node /usr/local/lib/node_modules/@warpio/warpio-cli/bundle/gemini.js
             else
               echo "❌ Warpio CLI not found. Available commands:"
               ls -la /usr/local/bin/ | grep -i warpio || echo "No warpio in /usr/local/bin/"

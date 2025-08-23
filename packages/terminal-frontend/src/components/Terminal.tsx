@@ -47,8 +47,12 @@ export function Terminal({ token, onLogout }: TerminalProps) {
 
     xtermRef.current = xterm
 
-    // Initialize socket connection
-    const socket = io('http://localhost:3003', {
+    // Initialize socket connection - use current host for WebSocket
+    const socketUrl = window.location.protocol === 'https:' 
+      ? `wss://${window.location.host}` 
+      : `ws://${window.location.host}`;
+    
+    const socket = io(socketUrl, {
       transports: ['websocket', 'polling']
     })
 
