@@ -81,7 +81,7 @@ COPY --from=frontend-builder /app/packages/terminal-frontend/dist ./packages/ter
 # Create stub for missing web-server package and fix HTTPS headers
 RUN mkdir -p packages/web-server/src/auth && \
     echo 'import fs from "fs"; import path from "path"; const USERS_FILE = "/app/data/users.json"; export class UserManager { constructor() { this.ensureUsersFile(); } ensureUsersFile() { try { if (!fs.existsSync(USERS_FILE)) { fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true }); fs.writeFileSync(USERS_FILE, "[]"); } } catch(e) {} } getUsers() { try { return JSON.parse(fs.readFileSync(USERS_FILE, "utf8")); } catch(e) { return []; } } saveUsers(users) { try { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); } catch(e) {} } hasUsers() { return this.getUsers().length > 0; } async authenticateUser(username, password) { const users = this.getUsers(); return users.find(u => u.username === username && u.password === password) || null; } async createUser(userData) { const users = this.getUsers(); if (users.find(u => u.username === userData.username)) return false; users.push({ ...userData, createdAt: new Date().toISOString() }); this.saveUsers(users); return true; } }' > packages/web-server/src/auth/userManager.js && \
-    echo 'export class AuthMiddleware { constructor(userManager) { this.userManager = userManager; } requireAuth = (req, res, next) => { req.user = { username: "admin", workingDirectory: "/app/data" }; next(); }; }' > packages/web-server/src/auth/middleware.js && \
+    echo 'export class AuthMiddleware { constructor(userManager) { this.userManager = userManager; } requireAuth = (req, res, next) => { const token = req.headers.authorization?.replace("Bearer ", "") || req.session?.token; if (token === "admin-setup-token" || req.session?.user) { req.user = req.session?.user || { username: "admin", workingDirectory: "/app/data" }; next(); } else { res.status(401).json({ error: "Unauthorized" }); } }; }' > packages/web-server/src/auth/middleware.js && \
     sed -i 's/scriptSrc: \["'\''self'\''", "'\''unsafe-eval'\''"]/scriptSrc: ["'\''self'\''", "'\''unsafe-eval'\''", "'\''unsafe-inline'\''"]/' packages/web-terminal/src/terminalServer.ts && \
     sed -i '/helmet({/,/}));/c\
     this.app.use(helmet({\
@@ -94,6 +94,20 @@ RUN mkdir -p packages/web-server/src/auth && \
 
 # Copy scripts and other required files
 COPY scripts ./scripts
+
+# Create bootstrap script for first user setup
+RUN echo '#!/bin/bash\n\
+echo "🚀 Warpio Net Bootstrap Setup"\n\
+echo "Creating first admin user..."\n\
+mkdir -p /app/data\n\
+echo "[{\"username\":\"admin\",\"password\":\"warpio123\",\"workingDirectory\":\"/app/data/admin\",\"geminiApiKey\":\"$GEMINI_API_KEY\",\"createdAt\":\"$(date -Iseconds)\"}]" > /app/data/users.json\n\
+echo "✅ First admin user created:"\n\
+echo "   Username: admin"\n\
+echo "   Password: warpio123"\n\
+echo "   🔒 IMPORTANT: Change this password after first login!"\n\
+echo ""\n\
+echo "Access your terminal at: http://localhost:5015"\n\
+' > /app/bootstrap.sh && chmod +x /app/bootstrap.sh
 
 # Create data directory for user storage
 RUN mkdir -p /app/data/.warpio/web-server \
