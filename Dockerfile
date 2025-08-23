@@ -57,7 +57,7 @@ RUN mkdir -p /app/data /app/data/admin && \
 # Copy application files
 COPY package*.json ./
 COPY packages/web-terminal/package*.json ./packages/web-terminal/
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copy built frontend and backend source
 COPY --from=frontend-builder /app/packages/terminal-frontend/dist ./packages/terminal-frontend/dist
