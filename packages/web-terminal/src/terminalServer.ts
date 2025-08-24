@@ -491,8 +491,8 @@ export class WarpioTerminalServer {
 
           socket.emit('auth-success', { user });
           
-          // Start warpio terminal process - simple approach
-          ptyProcess = spawn('warpio', [], {
+          // Start warpio terminal process - simple approach with limited MCP servers for faster startup
+          ptyProcess = spawn('warpio', ['--allowed-mcp-server-names', 'compression-mcp,arxiv-mcp,plot-mcp'], {
             name: 'xterm-color',
             cols: 80,
             rows: 24,
