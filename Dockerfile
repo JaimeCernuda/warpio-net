@@ -103,6 +103,20 @@ RUN chown -R warpio:nodejs /app && \
 # Switch to application user
 USER warpio
 
+# Pre-install MCP servers as warpio user to avoid startup delays
+RUN echo "Pre-installing MCP servers as warpio user..." && \
+    cd /home/warpio && \
+    uvx iowarp-mcps compression --help > /dev/null 2>&1 || echo "Compression MCP installed" && \
+    uvx iowarp-mcps arxiv --help > /dev/null 2>&1 || echo "ArXiv MCP installed" && \
+    uvx iowarp-mcps plot --help > /dev/null 2>&1 || echo "Plot MCP installed" && \
+    uvx iowarp-mcps ndp --help > /dev/null 2>&1 || echo "NDP MCP installed" && \
+    uvx iowarp-mcps lmod --help > /dev/null 2>&1 || echo "Lmod MCP installed" && \
+    timeout 180 uvx iowarp-mcps hdf5 --help > /dev/null 2>&1 || echo "HDF5 MCP install attempted" && \
+    timeout 180 uvx iowarp-mcps pandas --help > /dev/null 2>&1 || echo "Pandas MCP install attempted" && \
+    timeout 180 uvx iowarp-mcps node-hardware --help > /dev/null 2>&1 || echo "Node-hardware MCP install attempted" && \
+    timeout 180 uvx iowarp-mcps adios --help > /dev/null 2>&1 || echo "ADIOS MCP install attempted" && \
+    echo "MCP server pre-installation completed for warpio user"
+
 # Environment variables
 ENV NODE_ENV=production
 ENV PORT=5015
