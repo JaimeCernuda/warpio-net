@@ -3,12 +3,13 @@ import { Terminal } from './components/Terminal'
 import { LoginForm } from './components/LoginForm'
 import { Sidebar } from './components/Sidebar'
 import { FileManager } from './components/FileManager'
+import { GettingStarted } from './components/GettingStarted'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [activeView, setActiveView] = useState<'terminal' | 'files'>('terminal')
+  const [activeView, setActiveView] = useState<'getting-started' | 'terminal' | 'files'>('getting-started')
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -109,7 +110,9 @@ function App() {
         onLogout={handleLogout}
       />
       <div style={{ flex: 1 }}>
-        {activeView === 'terminal' ? (
+        {activeView === 'getting-started' ? (
+          <GettingStarted />
+        ) : activeView === 'terminal' ? (
           <Terminal token={token!} onLogout={handleLogout} />
         ) : (
           <FileManager token={token!} />

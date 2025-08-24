@@ -33,10 +33,18 @@ RUN apk add --no-cache \
     py3-pip \
     make \
     g++ \
+    gcc \
     jq \
+    coreutils \
+    linux-headers \
+    hdf5-dev \
+    zlib-dev \
+    perl \
+    cmake \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && ln -sf /root/.cargo/bin/uv /usr/local/bin/uv \
-    && ln -sf /root/.cargo/bin/uvx /usr/local/bin/uvx \
+    && cp /root/.local/bin/uv /usr/local/bin/uv \
+    && cp /root/.local/bin/uvx /usr/local/bin/uvx \
+    && chmod 755 /usr/local/bin/uv /usr/local/bin/uvx \
     && echo "Verifying uv installation..." \
     && uv --version \
     && uvx --version
@@ -88,10 +96,9 @@ RUN mkdir -p packages/web-server/src/auth && \
 RUN echo '[{"username":"admin","password":"warpio123","workingDirectory":"/app/data/admin","createdAt":"2024-01-01T00:00:00.000Z"}]' > /app/data/users.json && \
     cp -r /usr/local/lib/warpio-cli-src/.gemini /app/data/admin/.gemini
 
-# Fix permissions and ensure warpio user can access uv tools
+# Fix permissions
 RUN chown -R warpio:nodejs /app && \
-    chmod -R 755 /app && \
-    chmod 755 /usr/local/bin/uv /usr/local/bin/uvx
+    chmod -R 755 /app
 
 # Switch to application user
 USER warpio

@@ -1,7 +1,7 @@
 
 interface SidebarProps {
-  activeView: 'terminal' | 'files'
-  onViewChange: (view: 'terminal' | 'files') => void
+  activeView: 'getting-started' | 'terminal' | 'files'
+  onViewChange: (view: 'getting-started' | 'terminal' | 'files') => void
   onLogout: () => void
 }
 
@@ -43,6 +43,26 @@ export function Sidebar({ activeView, onViewChange, onLogout }: SidebarProps) {
         flex: 1,
         padding: '1rem'
       }}>
+        <button
+          onClick={() => onViewChange('getting-started')}
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '0.75rem 1rem',
+            marginBottom: '0.5rem',
+            background: activeView === 'getting-started' ? '#0a5c2e' : 'transparent',
+            border: activeView === 'getting-started' ? '1px solid #0f7c3b' : '1px solid #444',
+            color: activeView === 'getting-started' ? '#0f0' : '#ccc',
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            cursor: 'pointer',
+            textAlign: 'left',
+            borderRadius: '4px'
+          }}
+        >
+          🚀 Getting Started
+        </button>
+
         <button
           onClick={() => onViewChange('terminal')}
           style={{
