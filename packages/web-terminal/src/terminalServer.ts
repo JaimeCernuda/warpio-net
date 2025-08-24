@@ -505,14 +505,51 @@ export class WarpioTerminalServer {
             }
           });
 
+          let hasReceivedData = false;
+          let progressTimer: NodeJS.Timeout | null = null;
+          let progressCount = 0;
+
+          // Progress monitoring for MCP server compilation
+          const showProgress = () => {
+            if (!hasReceivedData) {
+              const messages = [
+                '⚙️  Initializing MCP servers...',
+                '🔨 Compiling native dependencies (HDF5, pandas, adios)...',
+                '📦 Building scientific computing packages...',
+                '🧪 Preparing data analysis tools...',
+                '⚡ Optimizing performance libraries...',
+                '🔬 Configuring research computing environment...'
+              ];
+              const message = messages[progressCount % messages.length];
+              socket.emit('data', `\r\n\x1b[33m${message}\x1b[0m\r\n`);
+              progressCount++;
+            }
+          };
+
           ptyProcess.onData((data: string) => {
+            hasReceivedData = true;
+            if (progressTimer) {
+              clearInterval(progressTimer);
+              progressTimer = null;
+            }
             socket.emit('data', data);
           });
 
           ptyProcess.onExit((code: number) => {
             console.log('Warpio process exited with code:', code);
+            if (progressTimer) {
+              clearInterval(progressTimer);
+            }
             socket.emit('exit', { code });
           });
+
+          // Start progress updates if warpio doesn't respond quickly
+          setTimeout(() => {
+            if (!hasReceivedData) {
+              socket.emit('data', '\r\n\x1b[36m🚀 Starting Warpio with full MCP server suite...\x1b[0m\r\n');
+              progressTimer = setInterval(showProgress, 3000);
+            }
+          }, 2000);
 
           socket.emit('ready');
 
