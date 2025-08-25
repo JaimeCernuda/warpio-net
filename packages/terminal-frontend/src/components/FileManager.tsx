@@ -20,10 +20,18 @@ export function FileManager({ token }: FileManagerProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
+  const [selectedFileType, setSelectedFileType] = useState<'text' | 'binary' | 'image'>('text')
+  const [imageUrl, setImageUrl] = useState<string>('')
 
   useEffect(() => {
     loadDirectory(currentPath)
   }, [currentPath])
+
+  const isImageFile = (fileName: string): boolean => {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'))
+    return imageExtensions.includes(extension)
+  }
 
   const loadDirectory = async (path: string) => {
     setIsLoading(true)
@@ -53,6 +61,35 @@ export function FileManager({ token }: FileManagerProps) {
 
   const loadFile = async (filePath: string) => {
     try {
+      // Clean up previous image URL to prevent memory leaks
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+        setImageUrl('');
+      }
+      
+      // Check if it's an image file
+      if (isImageFile(filePath)) {
+        setSelectedFileType('image')
+        setFileContent('') // Clear text content for images
+        setSelectedFile(filePath)
+        
+        // Fetch image as blob and create object URL
+        const imageResponse = await fetch(`/api/files/raw?path=${encodeURIComponent(filePath)}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (imageResponse.ok) {
+          const blob = await imageResponse.blob();
+          const url = URL.createObjectURL(blob);
+          setImageUrl(url);
+        } else {
+          setError('Failed to load image');
+        }
+        return
+      }
+
       const response = await fetch(`/api/files/read?path=${encodeURIComponent(filePath)}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -66,8 +103,10 @@ export function FileManager({ token }: FileManagerProps) {
       const data = await response.json()
       
       if (data.type === 'binary') {
+        setSelectedFileType('binary')
         setFileContent(`[Binary file: ${data.size} bytes]`)
       } else {
+        setSelectedFileType('text')
         setFileContent(data.content || '')
       }
       
@@ -125,8 +164,10 @@ export function FileManager({ token }: FileManagerProps) {
       }
       
       // Refresh the directory to show the new file
-      await loadDirectory(currentPath)
-      alert('File uploaded successfully!')
+      setTimeout(async () => {
+        await loadDirectory(currentPath)
+        alert('File uploaded successfully!')
+      }, 100) // Small delay to ensure file is fully written
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload file')
     } finally {
@@ -324,44 +365,93 @@ export function FileManager({ token }: FileManagerProps) {
             }}>
               <div>
                 <div style={{ color: '#0f0', fontSize: '14px' }}>
-                  📝 {selectedFile}
+                  {selectedFileType === 'image' ? '🖼️' : selectedFileType === 'binary' ? '📄' : '📝'} {selectedFile}
+                </div>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '0.25rem' }}>
+                  {selectedFileType === 'image' ? 'Image Preview' : selectedFileType === 'binary' ? 'Binary File' : 'Text Editor'}
                 </div>
               </div>
-              <button
-                onClick={saveFile}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: '#0a5c2e',
-                  border: '1px solid #0f7c3b',
-                  color: '#0f0',
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  borderRadius: '4px'
-                }}
-              >
-                Save
-              </button>
+              {selectedFileType === 'text' && (
+                <button
+                  onClick={saveFile}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: '#0a5c2e',
+                    border: '1px solid #0f7c3b',
+                    color: '#0f0',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    borderRadius: '4px'
+                  }}
+                >
+                  Save
+                </button>
+              )}
             </div>
 
-            {/* Editor */}
-            <textarea
-              value={fileContent}
-              onChange={(e) => setFileContent(e.target.value)}
-              style={{
+            {/* Editor/Viewer */}
+            {selectedFileType === 'image' ? (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#000',
+                padding: '1rem'
+              }}>
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={selectedFile}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      border: '1px solid #333',
+                      borderRadius: '4px'
+                    }}
+                    onLoad={() => console.log('Image loaded successfully')}
+                    onError={() => setError('Failed to load image')}
+                  />
+                ) : (
+                  <div style={{ color: '#666', textAlign: 'center' }}>
+                    Loading image...
+                  </div>
+                )}
+              </div>
+            ) : selectedFileType === 'binary' ? (
+              <div style={{
                 flex: 1,
                 background: '#000',
-                color: '#fff',
-                border: 'none',
+                color: '#666',
                 padding: '1rem',
-                fontFamily: 'Monaco, Consolas, "Courier New", monospace',
-                fontSize: '14px',
-                lineHeight: '1.5',
-                resize: 'none',
-                outline: 'none'
-              }}
-              placeholder="Select a file to edit..."
-            />
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+              }}>
+                {fileContent}
+              </div>
+            ) : (
+              <textarea
+                value={fileContent}
+                onChange={(e) => setFileContent(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#000',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '1rem',
+                  fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  resize: 'none',
+                  outline: 'none'
+                }}
+                placeholder="Select a file to edit..."
+              />
+            )}
           </>
         ) : (
           <div style={{

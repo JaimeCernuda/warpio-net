@@ -337,6 +337,48 @@ export class WarpioTerminalServer {
       }
     });
 
+    // Serve raw file content (for images, etc.)
+    this.app.get('/api/files/raw', this.authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const requestedPath = req.query.path as string;
+        if (!requestedPath) {
+          return res.status(400).json({ error: 'Path parameter required' });
+        }
+
+        const fullPath = resolvePath(req.user!.workingDirectory, requestedPath);
+        const stats = await fs.stat(fullPath);
+        
+        if (stats.isDirectory()) {
+          return res.status(400).json({ error: 'Path is a directory, not a file' });
+        }
+
+        // Determine MIME type based on file extension
+        const ext = path.extname(fullPath).toLowerCase();
+        const mimeTypes: { [key: string]: string } = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.gif': 'image/gif',
+          '.bmp': 'image/bmp',
+          '.webp': 'image/webp',
+          '.svg': 'image/svg+xml'
+        };
+        
+        const mimeType = mimeTypes[ext] || 'application/octet-stream';
+        
+        // Set appropriate headers
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Length', stats.size);
+        
+        // Stream the file
+        const fileStream = await fs.readFile(fullPath);
+        res.send(fileStream);
+      } catch (error) {
+        console.error('Raw file serve error:', error);
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to serve file' });
+      }
+    });
+
     // Read file contents
     this.app.get('/api/files/read', this.authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
       try {
