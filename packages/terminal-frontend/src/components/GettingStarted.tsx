@@ -54,7 +54,6 @@ export function GettingStarted() {
           </p>
           <ul style={{ paddingLeft: '2rem', lineHeight: '1.8' }}>
             <li><strong style={{ color: '#0f0' }}>Personal API Key:</strong> Your own Gemini API key for isolated usage</li>
-            <li><strong style={{ color: '#0f0' }}>.gemini Config:</strong> Warpio configuration files for MCP servers</li>
             <li><strong style={{ color: '#0f0' }}>File Storage:</strong> Your project files and data</li>
             <li><strong style={{ color: '#0f0' }}>Command History:</strong> Your terminal session persistence</li>
           </ul>
@@ -81,11 +80,11 @@ export function GettingStarted() {
         <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ color: '#0af', marginBottom: '1rem' }}>🏃 Quick Start</h2>
           <ol style={{ paddingLeft: '2rem', lineHeight: '1.8' }}>
-            <li>Go to the <strong style={{ color: '#0f0' }}>Terminal</strong> tab to start using Warpio CLI</li>
-            <li>Try: <code style={{ background: '#222', padding: '0.2rem' }}>warpio -p "Help me analyze some data"</code></li>
+            <li>Go to the <strong style={{ color: '#0f0' }}>Terminal</strong> tab to start using Warpio</li>
+            <li>Try: <em style={{ color: '#0f0' }}>"Help me analyze some data from a CSV file"</em></li>
             <li>Use the <strong style={{ color: '#0f0' }}>Files</strong> tab to upload your data files</li>
             <li>Ask Warpio to use specific MCP servers: <em>"Use arxiv to find papers about machine learning"</em></li>
-            <li>Check available personas: <code style={{ background: '#222', padding: '0.2rem' }}>warpio --list-personas</code></li>
+            <li>In Terminal view, check available personas: <em style={{ color: '#0f0' }}>--list-personas</em></li>
           </ol>
         </div>
 
@@ -98,10 +97,10 @@ export function GettingStarted() {
         }}>
           <h3 style={{ color: '#f84', marginBottom: '0.5rem' }}>💡 Pro Tips</h3>
           <ul style={{ paddingLeft: '2rem', lineHeight: '1.8', fontSize: '0.9rem' }}>
-            <li>Use <code style={{ background: '#222', padding: '0.2rem' }}>warpio mcp list</code> to see all available MCP servers</li>
+            <li>Use <strong style={{ color: '#0f0' }}>!</strong> to introduce standard shell commands from within Warpio (e.g., <em>!ls</em>, <em>!pwd</em>)</li>
             <li>Your API key is private to your workspace - quota isolation per user</li>
             <li>Files are preserved between sessions in your personal directory</li>
-            <li>The terminal supports standard Unix commands and file operations</li>
+            <li>Just type your requests naturally - Warpio understands conversational commands</li>
           </ul>
         </div>
       </div>

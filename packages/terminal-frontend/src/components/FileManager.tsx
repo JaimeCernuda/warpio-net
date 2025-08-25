@@ -163,11 +163,10 @@ export function FileManager({ token }: FileManagerProps) {
         throw new Error('Failed to upload file')
       }
       
-      // Refresh the directory to show the new file
-      setTimeout(async () => {
-        await loadDirectory(currentPath)
-        alert('File uploaded successfully!')
-      }, 100) // Small delay to ensure file is fully written
+      // Small delay to ensure file is fully written, then refresh
+      await new Promise(resolve => setTimeout(resolve, 100))
+      await loadDirectory(currentPath)
+      alert('File uploaded successfully!')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload file')
     } finally {
@@ -248,6 +247,21 @@ export function FileManager({ token }: FileManagerProps) {
                 ← Up
               </button>
             )}
+            <button
+              onClick={() => loadDirectory(currentPath)}
+              disabled={isLoading}
+              style={{
+                padding: '0.25rem 0.5rem',
+                background: isLoading ? '#666' : '#333',
+                border: '1px solid #555',
+                color: isLoading ? '#ccc' : '#0ff',
+                fontSize: '11px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontFamily: 'monospace'
+              }}
+            >
+              {isLoading ? '⏳ Loading...' : '🔄 Refresh'}
+            </button>
             <label
               style={{
                 padding: '0.25rem 0.5rem',
