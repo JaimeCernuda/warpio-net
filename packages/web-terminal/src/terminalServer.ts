@@ -12,6 +12,10 @@ import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { spawn } from 'node-pty';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
@@ -473,6 +477,68 @@ export class WarpioTerminalServer {
     }
   }
 
+  // Get available MCP servers from warpio
+  private async getAvailableMCPServers(): Promise<string[]> {
+    try {
+      const { stdout } = await execAsync('warpio --list-mcp-servers 2>/dev/null || echo ""');
+      if (stdout.trim()) {
+        return stdout.trim().split('\n').filter(line => line.trim());
+      }
+      
+      // Fallback to known MCP servers if --list-mcp-servers doesn't exist
+      return [
+        'adios-mcp',
+        'ndp-mcp', 
+        'pandas-mcp',
+        'compression-mcp',
+        'arxiv-mcp',
+        'plot-mcp',
+        'lmod-mcp',
+        'hdf5-mcp',
+        'node-hardware-mcp'
+      ];
+    } catch (error) {
+      console.log('Could not get MCP servers list, using fallback');
+      return ['adios-mcp', 'ndp-mcp', 'pandas-mcp'];
+    }
+  }
+
+  // Install MCP servers dynamically
+  private async installMCPServers(mcpServers: string[], socket: any): Promise<void> {
+    const mcpToPackageMap: { [key: string]: string } = {
+      'adios-mcp': 'adios',
+      'ndp-mcp': 'ndp',
+      'pandas-mcp': 'pandas',
+      'compression-mcp': 'compression',
+      'arxiv-mcp': 'arxiv',
+      'plot-mcp': 'plot',
+      'lmod-mcp': 'lmod',
+      'hdf5-mcp': 'hdf5',
+      'node-hardware-mcp': 'node-hardware'
+    };
+
+    socket.emit('data', '\r\n🔄 Installing MCP servers...\r\n');
+    
+    for (const mcpServer of mcpServers) {
+      const packageName = mcpToPackageMap[mcpServer] || mcpServer.replace('-mcp', '');
+      
+      try {
+        socket.emit('data', `📦 Installing ${mcpServer}...\r\n`);
+        
+        // Install with timeout to prevent hanging
+        await execAsync(`timeout 120 uvx iowarp-mcps ${packageName} --help > /dev/null 2>&1`, {
+          cwd: process.env.HOME || '/home/warpio'
+        });
+        
+        socket.emit('data', `✅ ${mcpServer} installed\r\n`);
+      } catch (error) {
+        socket.emit('data', `⚠️  ${mcpServer} install attempted (may be slow)\r\n`);
+      }
+    }
+    
+    socket.emit('data', '✅ MCP server installation complete\r\n\r\n');
+  }
+
   private setupTerminalHandlers() {
     this.io.on('connection', (socket) => {
       console.log('Terminal client connected:', socket.id);
@@ -491,8 +557,22 @@ export class WarpioTerminalServer {
 
           socket.emit('auth-success', { user });
           
-          // Start warpio terminal process - MCP servers are pre-installed during build
-          ptyProcess = spawn('warpio', [], {
+          // Get available MCP servers dynamically
+          let availableMCPServers = await this.getAvailableMCPServers();
+          
+          // Allow environment variable to override MCP servers
+          if (process.env.WARPIO_MCP_SERVERS) {
+            availableMCPServers = process.env.WARPIO_MCP_SERVERS.split(',').map(s => s.trim());
+          }
+          
+          console.log('Available MCP servers:', availableMCPServers);
+          
+          // Install MCP servers before starting warpio
+          await this.installMCPServers(availableMCPServers, socket);
+          
+          // Start warpio terminal process with all available MCP servers
+          socket.emit('data', '🚀 Starting Warpio...\r\n');
+          ptyProcess = spawn('warpio', ['--allowed-mcp-server-names', availableMCPServers.join(',')], {
             name: 'xterm-color',
             cols: 80,
             rows: 24,
@@ -505,51 +585,14 @@ export class WarpioTerminalServer {
             }
           });
 
-          let hasReceivedData = false;
-          let progressTimer: NodeJS.Timeout | null = null;
-          let progressCount = 0;
-
-          // Progress monitoring for MCP server compilation
-          const showProgress = () => {
-            if (!hasReceivedData) {
-              const messages = [
-                '⚙️  Initializing MCP servers...',
-                '🔨 Compiling native dependencies (HDF5, pandas, adios)...',
-                '📦 Building scientific computing packages...',
-                '🧪 Preparing data analysis tools...',
-                '⚡ Optimizing performance libraries...',
-                '🔬 Configuring research computing environment...'
-              ];
-              const message = messages[progressCount % messages.length];
-              socket.emit('data', `\r\n\x1b[33m${message}\x1b[0m\r\n`);
-              progressCount++;
-            }
-          };
-
           ptyProcess.onData((data: string) => {
-            hasReceivedData = true;
-            if (progressTimer) {
-              clearInterval(progressTimer);
-              progressTimer = null;
-            }
             socket.emit('data', data);
           });
 
           ptyProcess.onExit((code: number) => {
             console.log('Warpio process exited with code:', code);
-            if (progressTimer) {
-              clearInterval(progressTimer);
-            }
             socket.emit('exit', { code });
           });
-
-          // Start progress updates if warpio doesn't respond quickly
-          setTimeout(() => {
-            if (!hasReceivedData) {
-              socket.emit('data', '\r\n\x1b[36m🚀 Starting Warpio with full MCP server suite...\x1b[0m\r\n');
-              progressTimer = setInterval(showProgress, 3000);
-            }
-          }, 2000);
 
           socket.emit('ready');
 

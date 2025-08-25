@@ -30,6 +30,10 @@ WARPIO_SESSION_SECRET=your-secure-session-secret
 
 # Optional: Host directory for user workspaces
 WARPIO_WORKSPACES_DIR=./workspaces
+
+# Optional: Specify MCP servers to use (comma-separated)
+# If not set, all available MCP servers will be dynamically detected and installed
+# WARPIO_MCP_SERVERS=adios-mcp,ndp-mcp,pandas-mcp
 ```
 
 ### 3. Start Services
@@ -109,6 +113,7 @@ warpio-net/
 | `GEMINI_API_KEY` | ✅ | - | Google Gemini API key |
 | `WARPIO_SESSION_SECRET` | ❌ | auto-generated | JWT session secret |
 | `WARPIO_WORKSPACES_DIR` | ❌ | `./workspaces` | Host directory for user files |
+| `WARPIO_MCP_SERVERS` | ❌ | auto-detect | Comma-separated list of MCP servers to use |
 | `NODE_ENV` | ❌ | `production` | Node.js environment |
 | `PORT` | ❌ | `3003` | Application port |
 
@@ -122,6 +127,55 @@ volumes:
   # User workspace files (optional host mount)
   - ./workspaces:/workspaces
 ```
+
+### MCP Server Management
+
+Warpio Net now supports **dynamic MCP server installation** that automatically detects and installs available Model Context Protocol servers.
+
+#### How it Works
+
+1. **Dynamic Detection**: When a user connects to the terminal, the system automatically detects available MCP servers from warpio-cli
+2. **On-Demand Installation**: MCP servers are installed dynamically using `uvx` when needed
+3. **Progress Feedback**: Users see real-time installation progress in their terminal
+4. **Flexible Configuration**: Override which MCP servers to use via environment variables
+
+#### Configuration Options
+
+**Automatic (Recommended)**:
+```bash
+# Let warpio automatically detect and install all available MCP servers
+# No additional configuration needed
+docker run -d -p 3003:5015 -e GEMINI_API_KEY=your_key warpio-net
+```
+
+**Manual Selection**:
+```bash
+# Specify only the MCP servers you want to use
+docker run -d -p 3003:5015 \
+  -e GEMINI_API_KEY=your_key \
+  -e WARPIO_MCP_SERVERS="adios-mcp,ndp-mcp,pandas-mcp" \
+  warpio-net
+```
+
+#### Available MCP Servers
+
+Common MCP servers that will be automatically detected:
+- `adios-mcp` - ADIOS scientific data format support
+- `ndp-mcp` - Network Data Protocol integration
+- `pandas-mcp` - Pandas data analysis tools
+- `compression-mcp` - File compression utilities
+- `arxiv-mcp` - ArXiv research paper access
+- `plot-mcp` - Data visualization tools
+- `lmod-mcp` - Environment module system
+- `hdf5-mcp` - HDF5 scientific data format
+- `node-hardware-mcp` - Hardware monitoring tools
+
+#### Benefits
+
+- **Future-Proof**: New MCP servers added to warpio-cli are automatically available
+- **No Maintenance**: No need to update warpio-net when new MCP servers are released
+- **Flexible**: Choose exactly which MCP servers you need for your use case
+- **Fast Startup**: Only requested MCP servers are installed, reducing startup time
 
 ## Production Deployment
 
