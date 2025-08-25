@@ -418,8 +418,12 @@ export class WarpioTerminalServer {
         // Ensure parent directory exists
         await fs.mkdir(path.dirname(fullPath), { recursive: true });
         
-        // Move uploaded file to target location
-        await fs.rename(req.file.path, fullPath);
+        // Copy uploaded file to target location (instead of rename to avoid cross-device link issues)
+        await fs.copyFile(req.file.path, fullPath);
+        
+        // Clean up temporary file
+        await fs.unlink(req.file.path);
+        
         const stats = await fs.stat(fullPath);
         
         res.json({

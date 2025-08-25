@@ -19,6 +19,7 @@ export function FileManager({ token }: FileManagerProps) {
   const [fileContent, setFileContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
     loadDirectory(currentPath)
@@ -102,6 +103,46 @@ export function FileManager({ token }: FileManagerProps) {
     }
   }
 
+  const uploadFile = async (file: File) => {
+    setIsUploading(true)
+    setError('')
+    
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('path', file.name) // Upload to current directory with original filename
+      
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload file')
+      }
+      
+      // Refresh the directory to show the new file
+      await loadDirectory(currentPath)
+      alert('File uploaded successfully!')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload file')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      uploadFile(file)
+    }
+    // Clear the input so the same file can be uploaded again
+    event.target.value = ''
+  }
+
   const navigateUp = () => {
     if (currentPath !== '.' && currentPath !== '') {
       const parentPath = currentPath.split('/').slice(0, -1).join('/') || '.'
@@ -149,23 +190,43 @@ export function FileManager({ token }: FileManagerProps) {
           <div style={{ fontSize: '12px', color: '#666' }}>
             Path: {currentPath === '.' ? '~' : currentPath}
           </div>
-          {currentPath !== '.' && (
-            <button
-              onClick={navigateUp}
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {currentPath !== '.' && (
+              <button
+                onClick={navigateUp}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: '#333',
+                  border: '1px solid #555',
+                  color: '#ccc',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace'
+                }}
+              >
+                ← Up
+              </button>
+            )}
+            <label
               style={{
-                marginTop: '0.5rem',
                 padding: '0.25rem 0.5rem',
-                background: '#333',
-                border: '1px solid #555',
-                color: '#ccc',
+                background: isUploading ? '#666' : '#0a5c2e',
+                border: '1px solid #0f7c3b',
+                color: isUploading ? '#ccc' : '#0f0',
                 fontSize: '11px',
-                cursor: 'pointer',
+                cursor: isUploading ? 'not-allowed' : 'pointer',
                 fontFamily: 'monospace'
               }}
             >
-              ← Up
-            </button>
-          )}
+              {isUploading ? '⏳ Uploading...' : '📤 Upload File'}
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
         </div>
 
         {/* File List */}
