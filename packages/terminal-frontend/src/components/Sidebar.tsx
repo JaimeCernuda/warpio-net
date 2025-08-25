@@ -9,6 +9,7 @@ export function Sidebar({ activeView, onViewChange, onLogout }: SidebarProps) {
   return (
     <div style={{
       width: '200px',
+      height: '100vh',
       background: '#111',
       borderRight: '1px solid #333',
       display: 'flex',

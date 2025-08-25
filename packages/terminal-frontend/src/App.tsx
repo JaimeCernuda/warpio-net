@@ -109,14 +109,16 @@ function App() {
         onViewChange={setActiveView}
         onLogout={handleLogout}
       />
-      <div style={{ flex: 1 }}>
-        {activeView === 'getting-started' ? (
+      <div style={{ flex: 1, height: '100vh', overflow: 'hidden' }}>
+        <div style={{ display: activeView === 'getting-started' ? 'block' : 'none', height: '100%' }}>
           <GettingStarted />
-        ) : activeView === 'terminal' ? (
+        </div>
+        <div style={{ display: activeView === 'terminal' ? 'block' : 'none', height: '100%' }}>
           <Terminal token={token!} onLogout={handleLogout} />
-        ) : (
+        </div>
+        <div style={{ display: activeView === 'files' ? 'block' : 'none', height: '100%' }}>
           <FileManager token={token!} />
-        )}
+        </div>
       </div>
     </div>
   )

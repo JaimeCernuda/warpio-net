@@ -14,6 +14,7 @@ export function Terminal({ token, onLogout }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<XTerm | null>(null)
   const socketRef = useRef<Socket | null>(null)
+  const fitAddonRef = useRef<FitAddon | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState('Initializing...')
 
@@ -46,6 +47,7 @@ export function Terminal({ token, onLogout }: TerminalProps) {
     fitAddon.fit()
 
     xtermRef.current = xterm
+    fitAddonRef.current = fitAddon
 
     // Initialize socket connection - use current host for WebSocket
     const socketUrl = window.location.protocol === 'https:' 
@@ -81,6 +83,10 @@ export function Terminal({ token, onLogout }: TerminalProps) {
 
     socket.on('data', (data: string) => {
       xterm.write(data)
+      // Auto-scroll to bottom when new data arrives
+      setTimeout(() => {
+        xterm.scrollToBottom()
+      }, 0)
     })
 
     socket.on('exit', (data: any) => {
@@ -102,28 +108,52 @@ export function Terminal({ token, onLogout }: TerminalProps) {
       }
     })
 
-    // Handle terminal resize
+    // Handle terminal resize with debouncing
+    let resizeTimeout: NodeJS.Timeout
     const handleResize = () => {
-      fitAddon.fit()
-      if (socket.connected) {
-        socket.emit('resize', { cols: xterm.cols, rows: xterm.rows })
-      }
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        fitAddon.fit()
+        if (socket.connected) {
+          socket.emit('resize', { cols: xterm.cols, rows: xterm.rows })
+        }
+      }, 100)
     }
 
     window.addEventListener('resize', handleResize)
+    
+    // Also resize when component becomes visible
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize()
+    })
+    if (terminalRef.current) {
+      resizeObserver.observe(terminalRef.current)
+    }
 
     // Cleanup
     return () => {
+      clearTimeout(resizeTimeout)
       window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()
       socket.disconnect()
       xterm.dispose()
     }
   }, [token])
 
+  // Add effect to handle resize when terminal becomes active
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (fitAddonRef.current) {
+        fitAddonRef.current.fit()
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <div style={{ 
-      height: '100vh', 
-      width: '100vw', 
+      height: '100%', 
+      width: '100%', 
       background: '#000',
       display: 'flex',
       flexDirection: 'column'
