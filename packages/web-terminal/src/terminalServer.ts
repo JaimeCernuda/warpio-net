@@ -485,7 +485,7 @@ export class WarpioTerminalServer {
         return stdout.trim().split('\n').filter(line => line.trim());
       }
       
-      // Enable all available MCP servers
+      // Enable all available MCP servers (excluding hdf5-mcp which blocks startup)
       return [
         'adios-mcp',
         'ndp-mcp', 
@@ -494,7 +494,6 @@ export class WarpioTerminalServer {
         'arxiv-mcp',
         'plot-mcp',
         'lmod-mcp',
-        'hdf5-mcp',
         'node-hardware-mcp'
       ];
     } catch (error) {
