@@ -81,12 +81,26 @@ export function Terminal({ token, onLogout }: TerminalProps) {
       xterm.writeln('\x1b[36mType your commands below. Press Ctrl+C to exit.\x1b[0m\r\n')
     })
 
+    let shouldAutoScroll = true
+    
+    // Track if user is scrolling manually
+    xterm.onScroll(() => {
+      const viewport = xterm.element?.querySelector('.xterm-viewport')
+      if (viewport) {
+        const isAtBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 10
+        shouldAutoScroll = isAtBottom
+      }
+    })
+
     socket.on('data', (data: string) => {
       xterm.write(data)
-      // Auto-scroll to bottom when new data arrives
-      setTimeout(() => {
-        xterm.scrollToBottom()
-      }, 0)
+      // Only auto-scroll if user hasn't manually scrolled up
+      if (shouldAutoScroll) {
+        // Use requestAnimationFrame to avoid flickering
+        requestAnimationFrame(() => {
+          xterm.scrollToBottom()
+        })
+      }
     })
 
     socket.on('exit', (data: any) => {

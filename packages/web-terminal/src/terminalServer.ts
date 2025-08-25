@@ -290,14 +290,22 @@ export class WarpioTerminalServer {
         const requestedPath = req.query.path as string || '.';
         const fullPath = resolvePath(req.user!.workingDirectory, requestedPath);
         
+        console.log('File API Debug:');
+        console.log('  - User working directory:', req.user!.workingDirectory);
+        console.log('  - Requested path:', requestedPath);
+        console.log('  - Full resolved path:', fullPath);
+        
         const stats = await fs.stat(fullPath);
         if (!stats.isDirectory()) {
           return res.status(400).json({ error: 'Path is not a directory' });
         }
 
         const entries = await fs.readdir(fullPath, { withFileTypes: true });
+        console.log('  - Raw entries found:', entries.map(e => e.name));
+        
         // Filter out dotfiles (files/folders starting with .)
         const visibleEntries = entries.filter(entry => !entry.name.startsWith('.'));
+        console.log('  - Visible entries after filtering:', visibleEntries.map(e => e.name));
         
         const items = await Promise.all(
           visibleEntries.map(async (entry) => {

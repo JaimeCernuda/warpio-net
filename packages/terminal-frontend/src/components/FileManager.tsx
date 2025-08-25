@@ -40,6 +40,7 @@ export function FileManager({ token }: FileManagerProps) {
       }
       
       const data = await response.json()
+      console.log('File API response:', data) // Debug logging
       setFiles(data.items || [])
       setCurrentPath(data.path || path)
     } catch (err) {
@@ -185,7 +186,13 @@ export function FileManager({ token }: FileManagerProps) {
             </div>
           )}
           
-          {!isLoading && !error && files.map((file) => (
+          {!isLoading && !error && files.length === 0 && (
+            <div style={{ padding: '1rem', color: '#666' }}>
+              No files found in this directory
+            </div>
+          )}
+          
+          {!isLoading && !error && files.length > 0 && files.map((file) => (
             <div
               key={file.name}
               onClick={() => {
