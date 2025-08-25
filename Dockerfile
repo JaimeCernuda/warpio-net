@@ -103,7 +103,7 @@ RUN chown -R warpio:nodejs /app && \
 # Switch to application user
 USER warpio
 
-# MCP servers will be installed dynamically on first use
+# MCP servers are installed dynamically when users connect
 
 # Environment variables
 ENV NODE_ENV=production
