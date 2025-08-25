@@ -484,6 +484,41 @@ export class WarpioTerminalServer {
       }
     });
 
+    // Create directory
+    this.app.post('/api/files/mkdir', this.authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { path: requestedPath } = req.body;
+        if (!requestedPath) {
+          return res.status(400).json({ error: 'Path parameter required' });
+        }
+
+        const fullPath = resolvePath(req.user!.workingDirectory, requestedPath);
+        
+        // Check if directory already exists
+        try {
+          const stats = await fs.stat(fullPath);
+          if (stats.isDirectory()) {
+            return res.status(409).json({ error: 'Directory already exists' });
+          } else {
+            return res.status(409).json({ error: 'File with same name already exists' });
+          }
+        } catch {
+          // Directory doesn't exist, which is what we want
+        }
+        
+        await fs.mkdir(fullPath, { recursive: true });
+        
+        res.json({
+          success: true,
+          path: requestedPath,
+          type: 'directory'
+        });
+      } catch (error) {
+        console.error('Directory creation error:', error);
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create directory' });
+      }
+    });
+
     // Delete file or directory
     this.app.delete('/api/files/delete', this.authMiddleware.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
       try {
